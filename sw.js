@@ -1,6 +1,5 @@
-/* 오프라인 지원 서비스워커 — https 로 배포했을 때만 사용됨
-   네트워크 우선(최신 버전 반영) + 3초 안에 응답 없으면 캐시 사용(지하층 등 통신 불가 구역) */
-const CACHE = 'wrsc-v2';
+﻿/* ?ㅽ봽?쇱씤 吏???쒕퉬?ㅼ썙而???https 濡?諛고룷?덉쓣 ?뚮쭔 ?ъ슜??   ?ㅽ듃?뚰겕 ?곗꽑(理쒖떊 踰꾩쟾 諛섏쁺) + 3珥??덉뿉 ?묐떟 ?놁쑝硫?罹먯떆 ?ъ슜(吏?섏링 ???듭떊 遺덇? 援ъ뿭) */
+const CACHE = 'wrsc-v3';
 const FILES = ['index.html', 'site_checklist.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

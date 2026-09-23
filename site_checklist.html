@@ -936,6 +936,7 @@ function dlLink(name, blob){
 }
 /* iOS(특히 홈 화면 앱 모드)는 다운로드가 불안정하므로 공유시트(파일에 저장·카카오톡·메일)를 사용 */
 async function dl(name, content, mime){
+  if (IN_APP) alert('메신저 앱 안의 브라우저에서는 파일 저장이 되지 않을 수 있습니다.\n' + (IS_IOS ? 'Safari' : 'Chrome') + '로 열어서 저장해 주세요.');
   const blob = new Blob([content], {type: mime});
   let file = null;
   try { file = new File([blob], name, {type: mime}); } catch(e){}
@@ -1456,7 +1457,55 @@ function showLock(dev, last, kv, noStore, done){
   window.addEventListener('hashchange', onHash);
 }
 
-licenseGate().then(() => {
+/* ====== 메신저 내부 브라우저 감지 ======
+   카카오톡·네이버·인스타그램 등 앱 안의 브라우저는 파일 저장·공유가 제한되고
+   저장공간도 Safari/Chrome과 분리되어 작성 내용이 유실될 수 있으므로 외부 브라우저로 넘김 */
+const UA = navigator.userAgent;
+const IN_APP = /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|FB_IAB|Line\/|DaumApps|everytimeApp|BAND\/|SamsungBrowser\/.*CrossApp|; wv\)/i.test(UA);
+const IS_KAKAO = /KAKAOTALK/i.test(UA);
+function inAppGate(){
+  if (!IN_APP) return Promise.resolve();
+  try { if (sessionStorage.getItem('inapp_ok')) return Promise.resolve(); } catch(e){}
+  /* 카카오톡은 외부 브라우저로 여는 공식 주소 형식을 지원 (#license=… 활성화 코드도 그대로 전달) */
+  const openExternal = () => {
+    if (IS_KAKAO) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
+    else if (/Android/i.test(UA))
+      location.href = 'intent://' + location.host + location.pathname + '#Intent;scheme=https;package=com.android.chrome;end';
+  };
+  if (IS_KAKAO) openExternal();
+  return new Promise(resolve => {
+    const L = document.getElementById('lock');
+    const browser = IS_IOS ? 'Safari' : 'Chrome';
+    L.innerHTML =
+      '<div class="card"><div class="hbar"><div></div><div></div><div></div><div></div><div></div><div></div></div><div class="body">' +
+      '<h2>' + browser + '에서 열어 주세요</h2><div class="co">건축물관리점검 현장 체크리스트</div>' +
+      '<div class="help" style="margin-top:0">지금은 <b>메신저 앱 안의 브라우저</b>로 열려 있습니다. 여기서는 <b>JSON·사진 ZIP·보고서 저장이 되지 않고</b>, 작성 내용과 사진이 사라질 수 있습니다.</div>' +
+      ((IS_KAKAO || /Android/i.test(UA)) ? '<div class="row"><button class="primary" id="ia_open">' + browser + '로 열기</button></div>' : '') +
+      '<div class="lbl">직접 여는 방법</div>' +
+      '<div style="font-size:13px;line-height:1.6;color:#333">' +
+      (IS_IOS ? '화면 아래(또는 위)의 <b>공유 [⬆] 또는 [···]</b> 버튼 → <b>[Safari로 열기]</b>를 누르세요.<br>또는 아래 [주소 복사] 후 Safari 주소창에 붙여넣으세요.'
+              : '화면 오른쪽 위 <b>[⋮]</b> 메뉴 → <b>[다른 브라우저로 열기]</b>를 누르세요.<br>또는 아래 [주소 복사] 후 Chrome 주소창에 붙여넣으세요.') +
+      '</div>' +
+      '<div class="row"><button id="ia_copy">주소 복사</button></div>' +
+      '<div class="msg" id="ia_msg"></div>' +
+      '<div style="text-align:center;margin-top:14px"><a href="#" id="ia_stay" style="font-size:12px;color:#888">저장 기능 없이 여기서 계속 보기</a></div>' +
+      '</div></div>';
+    const $ = id => document.getElementById(id);
+    if ($('ia_open')) $('ia_open').onclick = openExternal;
+    $('ia_copy').onclick = async () => {
+      const ok = await copyText(location.href);
+      $('ia_msg').textContent = ok ? '주소를 복사했습니다. ' + browser + ' 주소창에 붙여넣으세요.' : '복사하지 못했습니다.';
+      $('ia_msg').className = 'msg ' + (ok ? 'ok' : 'err');
+    };
+    $('ia_stay').onclick = e => {
+      e.preventDefault();
+      try { sessionStorage.setItem('inapp_ok', '1'); } catch(err){}
+      resolve();
+    };
+  });
+}
+
+inAppGate().then(licenseGate).then(() => {
   showProjName();
   build();
   updateProgress();
