@@ -103,6 +103,29 @@
   .modal .box p{margin:0 0 14px; font-size:14px;}
   .modal .box button{display:block; width:100%; margin-top:8px; padding:12px; font:inherit; font-weight:700; border-radius:8px; border:1px solid #333; background:#fff;}
   .modal .box button.primary{background:#111; color:#fff;}
+  /* 프로젝트 */
+  .projbtn{display:flex; align-items:center; gap:8px; width:calc(100% - 24px); margin:0 12px 8px; padding:8px 10px; font:inherit; font-size:14px;
+           background:#f1f2f1; border:1px solid #bbb; border-radius:8px; cursor:pointer; text-align:left; color:#111;}
+  .projbtn .pl{font-size:12px; color:#555; white-space:nowrap;}
+  .projbtn #projname{flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .projbtn .pc{font-size:12px; color:#0b57a4; white-space:nowrap;}
+  .modal .pbox{max-width:520px; text-align:left; padding:0; max-height:calc(100vh - 32px); display:flex; flex-direction:column; overflow:hidden;}
+  .pbox .phead{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #ddd; font-size:15px;}
+  .pbox .phead .x{display:inline; width:auto; margin:0; padding:0 6px; border:none; background:none; font-size:24px; line-height:1;}
+  .pbox .plist{overflow:auto; -webkit-overflow-scrolling:touch; flex:1;}
+  .pitem{display:flex; gap:8px; align-items:center; padding:10px 14px; border-bottom:1px solid #eee;}
+  .pitem.cur{background:#f4f8ff;}
+  .pinfo{flex:1; min-width:0;}
+  .pname{font-weight:700; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .psub{font-size:11.5px; color:#666; margin-top:2px;}
+  .pbtns{display:flex; gap:5px; flex-shrink:0;}
+  .modal .box .pbtns button{display:inline-block; width:auto; margin:0; padding:7px 9px; font-size:12.5px;}
+  .modal .box .pbtns button.on{background:#e6f4e6; color:var(--ok); border-color:var(--ok);}
+  .modal .box .pbtns button.danger{color:var(--warn); border-color:#e0a0a0;}
+  .pbox .pact{display:flex; gap:8px; padding:10px 14px; border-top:1px solid #ddd;}
+  .modal .box .pact button{margin:0;}
+  .pbox .pfoot{font-size:11px; color:#777; padding:0 14px 12px;}
+  @media (max-width:420px){ .pitem{flex-wrap:wrap;} .pbtns{width:100%; justify-content:flex-end;} }
   /* 라이선스 잠금 화면 */
   body.locked header, body.locked main, body.locked footer{display:none!important;}
   #lock{position:fixed; inset:0; z-index:1000; background:#f4f4f4; overflow:auto; -webkit-overflow-scrolling:touch;
@@ -131,6 +154,7 @@
     <h1>건축물관리점검 현장 체크리스트</h1>
     <span class="sub">우림구조엔지니어링</span>
   </div>
+  <button class="projbtn" onclick="openProjects()"><span class="pl">📁 프로젝트</span><span id="projname"></span><span class="pc">변경 ▾</span></button>
   <div class="progress">
     <div class="pbar"><div class="pfill" id="pfill"></div></div>
     <div class="ptext"><span id="ptext">0 / 0 항목</span><span id="savestat"></span></div>
@@ -400,18 +424,78 @@ if (IS_TOUCH) {
   document.addEventListener('focusout', () => document.body.classList.remove('kb'));
 }
 
-/* ====== 상태 관리 ====== */
-const LS_KEY = 'bldchk_v2';
-let S = {meta:{}, ans:{}, cmp:{}, cnt:{}, memo:{}, cap:{}, others:{}, otherNote:{}, prep:{}, sum:{}, use20:false, hasGong:false};
-try { const saved = localStorage.getItem(LS_KEY); if (saved) S = Object.assign(S, JSON.parse(saved)); } catch(e){}
+/* ====== 상태 관리 (프로젝트별 저장) ======
+   - 프로젝트 목록 : localStorage 'bldchk_projects'  [{id, name, created, updated}]
+   - 입력 내용     : localStorage 'bldchk_p_<프로젝트ID>'
+   - 사진          : IndexedDB 'bldchk' / 'photos' 에 '<프로젝트ID>/<사진ID>' 키로 저장
+   사진은 기기 사진첩이 아니라 이 앱(브라우저) 저장소에만 있으므로 JSON 백업 필수 */
+const LS_PROJ = 'bldchk_projects', LS_CUR = 'bldchk_cur', LS_OLD = 'bldchk_v2';
+const blankState = () => ({meta:{}, ans:{}, cmp:{}, cnt:{}, memo:{}, cap:{}, others:{}, otherNote:{}, prep:{}, sum:{}, use20:false, hasGong:false});
+const stKey = id => 'bldchk_p_' + id;
+const newProjId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const lsJSON = k => { try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } };
+const lsPut = (k, v) => { try { localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v)); return true; } catch(e){ return false; } };
+
+let PROJS = lsJSON(LS_PROJ) || [];
+let MIGRATE_PHOTOS_TO = null;
+if (!PROJS.length) {
+  /* 최초 실행 또는 이전 버전(단일 점검) 데이터 → 첫 프로젝트로 이전 */
+  const id = newProjId(), old = lsJSON(LS_OLD);
+  PROJS.push({id, name:(old && old.meta && old.meta.bname) || (old ? '기존 점검' : '새 점검'), created:Date.now(), updated:Date.now()});
+  if (old) { lsPut(stKey(id), old); MIGRATE_PHOTOS_TO = id; }
+  lsPut(LS_PROJ, PROJS);
+}
+let PROJ = null;
+try { PROJ = localStorage.getItem(LS_CUR); } catch(e){}
+if (!PROJS.some(p => p.id === PROJ)) PROJ = PROJS[0].id;
+lsPut(LS_CUR, PROJ);
+const LS_KEY = stKey(PROJ);
+const curProj = () => PROJS.find(p => p.id === PROJ);
+const pk = (pid, proj) => (proj || PROJ) + '/' + pid;          /* 사진 저장 키 */
+const loadState = id => Object.assign(blankState(), lsJSON(stKey(id)) || {});
+let S = loadState(PROJ);
 
 let db = null;
 try {
   const dbReq = indexedDB.open('bldchk', 1);
   dbReq.onupgradeneeded = e => { e.target.result.createObjectStore('photos'); };
-  dbReq.onsuccess = e => { db = e.target.result; renderAllPhotos(); };
+  dbReq.onsuccess = e => {
+    db = e.target.result;
+    if (MIGRATE_PHOTOS_TO) migratePhotos(MIGRATE_PHOTOS_TO).then(renderAllPhotos);
+    else renderAllPhotos();
+  };
   dbReq.onerror = () => { db = null; };
 } catch(e) { db = null; }
+
+/* 이전 버전 사진(프로젝트 구분 없는 키)을 지정 프로젝트로 이동 */
+function migratePhotos(id){
+  return new Promise(res => {
+    const tx = db.transaction('photos', 'readwrite'), st = tx.objectStore('photos');
+    st.openCursor().onsuccess = e => {
+      const c = e.target.result; if (!c) return;
+      if (String(c.key).indexOf('/') < 0) { st.put(c.value, id + '/' + c.key); c.delete(); }
+      c.continue();
+    };
+    tx.oncomplete = tx.onerror = () => res();
+  });
+}
+function projPhotoCount(id){
+  return new Promise(res => {
+    if (!db) return res(0);
+    try {
+      const q = db.transaction('photos').objectStore('photos').count(IDBKeyRange.bound(id + '/', id + '/￿'));
+      q.onsuccess = () => res(q.result); q.onerror = () => res(0);
+    } catch(e){ res(0); }
+  });
+}
+function deleteProjPhotos(id){
+  return new Promise(res => {
+    if (!db) return res();
+    const tx = db.transaction('photos', 'readwrite');
+    tx.objectStore('photos').delete(IDBKeyRange.bound(id + '/', id + '/￿'));
+    tx.oncomplete = tx.onerror = () => res();
+  });
+}
 
 let storageOK = true;
 function storageWarn(){
@@ -426,6 +510,12 @@ function storageWarn(){
 function save(){
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(S));
+    const p = curProj();
+    if (p) {
+      p.updated = Date.now();
+      if (S.meta.bname && S.meta.bname !== p.name) { p.name = S.meta.bname; showProjName(); }
+      localStorage.setItem(LS_PROJ, JSON.stringify(PROJS));
+    }
     const el = document.getElementById('savestat');
     el.textContent = '자동저장 ' + new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   } catch(e) {
@@ -501,7 +591,7 @@ async function addPhoto(itemId, file){
   const img = await shrink(file, 1600, 0.82);
   if (!img) { alert('이미지를 읽을 수 없습니다: ' + file.name); return; }
   const pid = itemId + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
-  db.transaction('photos','readwrite').objectStore('photos').put(img, pid);
+  db.transaction('photos','readwrite').objectStore('photos').put(img, pk(pid));
   S.cap[pid] = ''; save();
   renderPhotos(itemId);
 }
@@ -527,13 +617,13 @@ function renderPhotos(itemId){
   const keys = Object.keys(S.cap).filter(k => k.startsWith(itemId + '_'));
   list.innerHTML = '';
   keys.forEach(pid => {
-    tx.get(pid).onsuccess = e => {
+    tx.get(pk(pid)).onsuccess = e => {
       if (!e.target.result) return;
       const d = document.createElement('div'); d.className = 'ph';
       const im = document.createElement('img'); im.src = e.target.result;
       im.onclick = () => showPhoto(im.src);
       const del = document.createElement('button'); del.className = 'del'; del.textContent = '×';
-      del.onclick = () => { if (confirm('사진을 삭제할까요?')) { db.transaction('photos','readwrite').objectStore('photos').delete(pid); delete S.cap[pid]; save(); renderPhotos(itemId); } };
+      del.onclick = () => { if (confirm('사진을 삭제할까요?')) { db.transaction('photos','readwrite').objectStore('photos').delete(pk(pid)); delete S.cap[pid]; save(); renderPhotos(itemId); } };
       const cap = document.createElement('input'); cap.placeholder = '위치/내용'; cap.value = S.cap[pid] || '';
       cap.oninput = () => { S.cap[pid] = cap.value; save(); };
       d.appendChild(im); d.appendChild(del); d.appendChild(cap);
@@ -750,33 +840,35 @@ function build(){
   note.innerHTML = '체크리스트 번호(3.1.1~3.5.10)는 보고서 <b>"3장 점검세부항목별 점검내용"</b> 및 <b>별지 제2호 서식</b>과 1:1 대응합니다. ' +
     '판단결과·비교검토·지적건수·사진을 채우면 별지1·별지2·세부점검표 작성에 필요한 현장정보가 모두 확보됩니다. ' +
     '(항목별 점수·등급 산정과 개선방안 근거법령은 사무실 평가 단계에서 작성)<br>' +
-    '입력 내용은 이 기기(브라우저)에 자동저장됩니다. 점검 완료 후 <b>[JSON 저장]</b>으로 백업하고, <b>[요약보고서]</b>를 저장해 BLCM(blcm.go.kr) 입력 시 참조하세요. ' +
-    '다른 기기에서 이어서 작성: <a href="#" onclick="document.getElementById(\'importFile\').click();return false;">JSON 불러오기</a>' +
+    '입력 내용과 사진은 <b>프로젝트(건축물)별로</b> 이 기기(브라우저)에 자동저장됩니다. 사진은 휴대폰 사진첩에 남지 않으므로 점검 완료 후 반드시 <b>[JSON 저장]</b>으로 백업하고, <b>[요약보고서]</b>를 저장해 BLCM(blcm.go.kr) 입력 시 참조하세요. ' +
+    '다른 기기에서 이어서 작성: <a href="#" onclick="document.getElementById(\'importFile\').click();return false;">JSON 불러오기</a> (새 프로젝트로 추가됨)' +
     '<br><span id="licinfo" style="font-size:11px;color:#888"></span>';
   M.appendChild(note);
 }
 
 /* ====== 진행률 / 미작성 ====== */
-function itemUnits(){
+function itemUnits(st){
   /* [key, kind] 목록: kind ans|cmp|oth */
+  st = st || S;
   const u = [];
   FORM.forEach(g => g.items.forEach(it => {
     it.qs.forEach((q, qi) => u.push(['ans', it.id + '_q' + qi, it.id]));
     if (!it.nocmp) u.push(['cmp', it.id, it.id]);
   }));
   OTHERS.forEach((o, i) => u.push(['oth', i, 'oth' + i]));
-  if (S.hasGong) GONG.forEach(g => u.push(['ans', g.id + '_q0', g.id]));
-  if (S.use20) STRENGTHEN.forEach(it => it.qs.forEach((q, qi) => u.push(['ans', it.id + '_q' + qi, it.id])));
+  if (st.hasGong) GONG.forEach(g => u.push(['ans', g.id + '_q0', g.id]));
+  if (st.use20) STRENGTHEN.forEach(it => it.qs.forEach((q, qi) => u.push(['ans', it.id + '_q' + qi, it.id])));
   return u;
 }
-function unitDone([kind, key]){
-  if (kind === 'ans') return !!S.ans[key];
-  if (kind === 'cmp') return !!S.cmp[key];
-  return !!S.others[key];
+function unitDone([kind, key], st){
+  st = st || S;
+  if (kind === 'ans') return !!st.ans[key];
+  if (kind === 'cmp') return !!st.cmp[key];
+  return !!st.others[key];
 }
 function updateProgress(){
   const units = itemUnits();
-  const done = units.filter(unitDone).length;
+  const done = units.filter(u => unitDone(u)).length;
   document.getElementById('pfill').style.width = (units.length ? done / units.length * 100 : 0) + '%';
   document.getElementById('ptext').textContent = done + ' / ' + units.length + ' 항목';
   FORM.forEach((g, gi) => {
@@ -785,11 +877,11 @@ function updateProgress(){
       it.qs.forEach((q, qi) => gu.push(['ans', it.id + '_q' + qi]));
       if (!it.nocmp) gu.push(['cmp', it.id]);
     });
-    const d = gu.filter(unitDone).length;
+    const d = gu.filter(u => unitDone(u)).length;
     const el = document.getElementById('cnt_g' + gi);
     if (el) { el.textContent = d + '/' + gu.length; el.className = 'cnt' + (d === gu.length ? ' done' : ''); }
   });
-  const od = OTHERS.map((o, i) => ['oth', i]).filter(unitDone).length;
+  const od = OTHERS.map((o, i) => ['oth', i]).filter(u => unitDone(u)).length;
   const oe = document.getElementById('cnt_oth');
   if (oe) { oe.textContent = od + '/' + OTHERS.length; oe.className = 'cnt' + (od === OTHERS.length ? ' done' : ''); }
 }
@@ -816,15 +908,17 @@ function showMissing(){
 }
 
 /* ====== 내보내기 ====== */
-async function collectPhotos(){
+/* 반환 키는 프로젝트 접두어 없는 사진ID (JSON 파일 호환 유지) */
+async function collectPhotos(st, proj){
+  st = st || S;
   return new Promise(res => {
     const out = {};
-    const keys = Object.keys(S.cap);
+    const keys = Object.keys(st.cap);
     if (!keys.length || !db) return res(out);
     let n = 0;
     const tx = db.transaction('photos').objectStore('photos');
     keys.forEach(pid => {
-      tx.get(pid).onsuccess = e => {
+      tx.get(pk(pid, proj)).onsuccess = e => {
         if (e.target.result) out[pid] = e.target.result;
         if (++n === keys.length) res(out);
       };
@@ -862,30 +956,110 @@ async function dl(name, content, mime){
     document.body.appendChild(m);
   }
 }
-async function exportJSON(){
-  const photos = await collectPhotos();
-  const name = safeName(S.meta.bname || '건축물') + '_점검데이터_' + (S.meta.date || new Date().toISOString().slice(0,10)) + '.json';
-  dl(name, JSON.stringify({state:S, photos}, null, 1), 'application/json');
+async function exportJSON(projId){
+  const id = projId || PROJ;
+  const st = id === PROJ ? S : loadState(id);
+  const p = PROJS.find(x => x.id === id) || {};
+  const photos = await collectPhotos(st, id);
+  const name = safeName(st.meta.bname || p.name || '건축물') + '_점검데이터_' + (st.meta.date || new Date().toISOString().slice(0,10)) + '.json';
+  dl(name, JSON.stringify({state:st, photos, project:{name:p.name}}, null, 1), 'application/json');
 }
+/* JSON 불러오기 → 항상 새 프로젝트로 추가 (작성 중인 프로젝트를 덮어쓰지 않음) */
 function importJSON(ev){
   const f = ev.target.files[0]; if (!f) return;
+  ev.target.value = '';
   const r = new FileReader();
   r.onload = () => {
-    try {
-      const d = JSON.parse(r.result);
-      S = d.state;
-      localStorage.setItem(LS_KEY, JSON.stringify(S));
-      if (d.photos && db && Object.keys(d.photos).length) {
-        /* 사진이 많으면 저장에 시간이 걸리므로 트랜잭션 완료 후 새로고침 */
-        const tx = db.transaction('photos','readwrite');
-        const st = tx.objectStore('photos');
-        Object.entries(d.photos).forEach(([k, v]) => st.put(v, k));
-        tx.oncomplete = () => location.reload();
-        tx.onerror = () => { alert('사진 일부를 저장하지 못했습니다 (저장공간 부족 등).'); location.reload(); };
-      } else setTimeout(() => location.reload(), 300);
-    } catch(e){ alert('파일을 읽을 수 없습니다: ' + e.message); }
+    let d;
+    try { d = JSON.parse(r.result); if (!d || !d.state || !d.state.meta) throw new Error('점검 데이터 파일이 아닙니다'); }
+    catch(e){ return alert('파일을 읽을 수 없습니다: ' + e.message); }
+    const st = Object.assign(blankState(), d.state);
+    const id = newProjId();
+    const name = st.meta.bname || (d.project && d.project.name) || f.name.replace(/\.json$/i, '');
+    if (!lsPut(stKey(id), st)) return alert('저장공간이 부족해 불러올 수 없습니다.');
+    PROJS.push({id, name, created:Date.now(), updated:Date.now()});
+    lsPut(LS_PROJ, PROJS);
+    const go = () => switchProject(id);
+    if (d.photos && db && Object.keys(d.photos).length) {
+      /* 사진이 많으면 저장에 시간이 걸리므로 트랜잭션 완료 후 전환 */
+      const tx = db.transaction('photos','readwrite');
+      const os = tx.objectStore('photos');
+      Object.entries(d.photos).forEach(([k, v]) => os.put(v, pk(k, id)));
+      tx.oncomplete = go;
+      tx.onerror = () => { alert('사진 일부를 저장하지 못했습니다 (저장공간 부족 등).'); go(); };
+    } else go();
   };
   r.readAsText(f);
+}
+
+/* ====== 프로젝트 관리 ====== */
+function switchProject(id){ lsPut(LS_CUR, id); location.reload(); }
+function showProjName(){
+  const el = document.getElementById('projname');
+  if (el) el.textContent = (curProj() || {}).name || '새 점검';
+}
+function newProject(){
+  const name = (prompt('새 점검 프로젝트 이름 (건축물 명칭)', '') || '').trim();
+  if (!name) return;
+  const id = newProjId(), st = blankState();
+  st.meta.bname = name;
+  if (!lsPut(stKey(id), st)) return alert('저장공간이 부족합니다. 완료된 프로젝트를 백업 후 삭제하세요.');
+  PROJS.push({id, name, created:Date.now(), updated:Date.now()});
+  lsPut(LS_PROJ, PROJS);
+  switchProject(id);
+}
+async function deleteProject(id){
+  const p = PROJS.find(x => x.id === id); if (!p) return;
+  const n = await projPhotoCount(id);
+  if (!confirm('[' + p.name + '] 프로젝트를 삭제할까요?\n입력 내용과 사진 ' + n + '장이 이 기기에서 영구 삭제됩니다.\n\n먼저 [백업]으로 JSON을 저장했는지 확인하세요.')) return;
+  await deleteProjPhotos(id);
+  try { localStorage.removeItem(stKey(id)); } catch(e){}
+  PROJS = PROJS.filter(x => x.id !== id);
+  if (!PROJS.length) PROJS.push({id:newProjId(), name:'새 점검', created:Date.now(), updated:Date.now()});
+  lsPut(LS_PROJ, PROJS);
+  if (id === PROJ) switchProject(PROJS[0].id);
+  else openProjects();
+}
+async function openProjects(){
+  const old = document.getElementById('projmodal'); if (old) old.remove();
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'projmodal';
+  const box = document.createElement('div'); box.className = 'box pbox';
+  box.innerHTML = '<div class="phead"><b>점검 프로젝트</b><button class="x" aria-label="닫기">×</button></div><div class="plist"></div>' +
+    '<div class="pact"><button class="primary" id="pm_new">+ 새 프로젝트</button><button id="pm_imp">JSON 불러오기</button></div>' +
+    '<div class="pfoot" id="pm_usage"></div>';
+  m.appendChild(box); document.body.appendChild(m);
+  const close = () => m.remove();
+  box.querySelector('.x').onclick = close;
+  m.onclick = e => { if (e.target === m) close(); };
+  box.querySelector('#pm_new').onclick = newProject;
+  box.querySelector('#pm_imp').onclick = () => document.getElementById('importFile').click();
+  const list = box.querySelector('.plist');
+  const sorted = PROJS.slice().sort((a, b) => (b.id === PROJ) - (a.id === PROJ) || b.updated - a.updated);
+  for (const p of sorted) {
+    const st = p.id === PROJ ? S : loadState(p.id);
+    const u = itemUnits(st), done = u.filter(x => unitDone(x, st)).length;
+    const n = await projPhotoCount(p.id);
+    const it = document.createElement('div'); it.className = 'pitem' + (p.id === PROJ ? ' cur' : '');
+    const info = document.createElement('div'); info.className = 'pinfo';
+    const nm = document.createElement('div'); nm.className = 'pname'; nm.textContent = p.name;
+    const sub = document.createElement('div'); sub.className = 'psub';
+    sub.textContent = (st.meta.date ? '점검일 ' + st.meta.date + ' · ' : '') + '진행 ' + done + '/' + u.length + ' · 사진 ' + n + '장 · 수정 ' +
+      new Date(p.updated).toLocaleDateString('ko-KR', {month:'numeric', day:'numeric'});
+    info.appendChild(nm); info.appendChild(sub);
+    const btns = document.createElement('div'); btns.className = 'pbtns';
+    const mk = (t, fn, cls) => { const b = document.createElement('button'); b.textContent = t; if (cls) b.className = cls; b.onclick = fn; btns.appendChild(b); };
+    if (p.id === PROJ) mk('작성 중', close, 'on');
+    else mk('열기', () => switchProject(p.id), 'primary');
+    mk('백업', () => exportJSON(p.id));
+    mk('삭제', () => deleteProject(p.id), 'danger');
+    it.appendChild(info); it.appendChild(btns);
+    list.appendChild(it);
+  }
+  try {
+    const est = await navigator.storage.estimate();
+    box.querySelector('#pm_usage').textContent = '이 기기 사용량 ' + (est.usage / 1048576).toFixed(0) + 'MB' +
+      (est.quota ? ' / 가능 ' + (est.quota / 1073741824).toFixed(1) + 'GB' : '') + ' · 사진은 이 기기에만 저장되니 점검 후 반드시 [백업]하세요.';
+  } catch(e){ box.querySelector('#pm_usage').textContent = '사진은 이 기기에만 저장되니 점검 후 반드시 [백업]하세요.'; }
 }
 async function exportReport(){
   const photos = await collectPhotos();
@@ -1206,6 +1380,7 @@ function showLock(dev, last, kv, noStore, done){
 }
 
 licenseGate().then(() => {
+  showProjName();
   build();
   updateProgress();
   renderAllPhotos();
