@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="현장점검">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>건축물관리점검 현장 체크리스트</title>
+<style>
+  :root{
+    --bar1:#000000; --bar2:#989998; --bar3:#BEBFBE; --bar4:#F1F2F1;
+    --label:#D7D8D7; --accent:#1a1a1a; --line:#c9c9c9;
+    --ok:#2e7d32; --warn:#c62828; --na:#757575;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%; text-size-adjust:100%;}
+  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','맑은 고딕',system-ui,sans-serif; background:#f4f4f4; color:#111; font-size:15px;
+       padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right);}
+  header{position:sticky; top:0; z-index:50; background:#fff; border-bottom:2px solid #000; padding-top:env(safe-area-inset-top);}
+  .hbar{display:flex; height:5px;}
+  .hbar div{flex:1;}
+  .hbar div:nth-child(1){background:var(--bar1);} .hbar div:nth-child(2),.hbar div:nth-child(3),.hbar div:nth-child(4){background:var(--bar2);} .hbar div:nth-child(5){background:var(--bar3);} .hbar div:nth-child(6){background:var(--bar4);}
+  .htop{display:flex; align-items:center; justify-content:space-between; padding:8px 12px;}
+  .htop h1{font-size:16px; margin:0; font-weight:700;}
+  .htop .sub{font-size:11px; color:#666;}
+  .progress{padding:0 12px 8px;}
+  .pbar{height:8px; background:#e2e2e2; border-radius:4px; overflow:hidden;}
+  .pfill{height:100%; background:linear-gradient(90deg,#444,#000); width:0%;}
+  .ptext{font-size:11px; color:#555; margin-top:3px; display:flex; justify-content:space-between;}
+  main{max-width:760px; margin:0 auto; padding:10px 10px calc(90px + env(safe-area-inset-bottom));}
+  details.sec{background:#fff; border:1px solid var(--line); border-radius:8px; margin-bottom:10px; overflow:hidden;}
+  details.sec>summary{list-style:none; cursor:pointer; padding:11px 12px; background:var(--label); font-weight:700; font-size:14.5px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--line); gap:8px;}
+  details.sec>summary::-webkit-details-marker{display:none;}
+  .cnt{font-size:12px; font-weight:400; color:#444; background:#fff; border-radius:10px; padding:2px 8px; border:1px solid #bbb; white-space:nowrap;}
+  .cnt.done{background:#e6f4e6; color:var(--ok); border-color:var(--ok);}
+  .ref{font-size:10.5px; font-weight:400; color:#555; display:block;}
+  .item{border-bottom:1px solid #e5e5e5; padding:10px 12px;}
+  .item:last-child{border-bottom:none;}
+  .ititle{font-weight:700; font-size:14px; display:flex; justify-content:space-between; gap:8px; align-items:baseline;}
+  .ititle .no{color:#0b57a4; margin-right:4px;}
+  .ititle .law{font-size:11px; color:#777; font-weight:400; white-space:nowrap;}
+  .q{margin:8px 0 2px;}
+  .qtext{font-size:13.5px; margin-bottom:5px; color:#222;}
+  .chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .chip{border:1px solid #aaa; border-radius:16px; padding:5px 12px; font-size:13px; background:#fff; cursor:pointer; user-select:none;}
+  .chip.sel{background:#111; color:#fff; border-color:#111; font-weight:700;}
+  .chip.sel.bad{background:var(--warn); border-color:var(--warn);}
+  .chip.sel.na{background:var(--na); border-color:var(--na);}
+  .cmp{background:#f4f8ff; border:1px solid #c6d8f0; border-radius:7px; padding:7px 9px; margin-top:8px;}
+  .cmp .qtext{font-size:12.5px; font-weight:700; color:#0b57a4; margin-bottom:5px;}
+  .cntrow{display:flex; align-items:center; gap:8px; margin-top:8px;}
+  .cntrow label{font-size:12.5px; color:#444; font-weight:700;}
+  .cntrow input{width:80px; border:1px solid #bbb; border-radius:6px; padding:6px; font:inherit; font-size:13px; text-align:center;}
+  textarea{width:100%; border:1px solid #bbb; border-radius:6px; padding:7px; font:inherit; font-size:13px; min-height:34px; resize:vertical; margin-top:6px; background:#fcfcfc;}
+  input[type=text],input[type=date],input[type=number]{width:100%; border:1px solid #bbb; border-radius:6px; padding:8px; font:inherit; font-size:14px; background:#fcfcfc;}
+  .field{margin-bottom:9px;}
+  .field label{display:block; font-size:12px; font-weight:700; color:#444; margin-bottom:3px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; padding:10px 12px;}
+  .grid2 .full{grid-column:1/3;}
+  .subhead{padding:7px 12px; font-size:12.5px; font-weight:700; color:#fff; background:#666;}
+  .photos{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .ph{position:relative; width:74px;}
+  .ph img{width:74px; height:74px; object-fit:cover; border-radius:6px; border:1px solid #ccc; display:block;}
+  .ph .del{position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:#c62828; color:#fff; border:none; font-size:12px; line-height:1; cursor:pointer;}
+  .ph input{width:74px; font-size:10px; border:none; border-bottom:1px solid #ddd; background:transparent; padding:2px 0;}
+  .addph{position:relative; display:inline-flex; align-items:center; gap:5px; margin-top:8px; margin-right:6px; font-size:12.5px; border:1px dashed #888; border-radius:6px; padding:6px 10px; background:#fafafa; cursor:pointer;}
+  .memo-label{font-size:11.5px; color:#666; margin-top:6px;}
+  footer{position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid #ccc; display:flex; gap:8px; z-index:50;
+         padding:8px calc(10px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left));}
+  body.kb footer{display:none;}  /* 모바일 키보드 표시 중에는 하단 버튼 숨김 */
+  footer button{flex:1; padding:11px 4px; font:inherit; font-size:13.5px; font-weight:700; border-radius:8px; border:1px solid #333; background:#fff; cursor:pointer;}
+  footer button.primary{background:#111; color:#fff;}
+  .note{font-size:12px; color:#555; background:#fffbe6; border:1px solid #e6d87a; border-radius:6px; padding:8px 10px; margin:10px 12px;}
+  .tip{font-size:12px; color:#8a6d00; background:#fff9e0; border-radius:5px; padding:5px 8px; margin-top:5px;}
+  .toggle-row{padding:10px 12px; border-bottom:1px solid #e5e5e5;}
+  .toggle-row label{font-size:13.5px; font-weight:700;}
+  .hidden{display:none!important;}
+  /* iOS Safari: display:none 인 file input 은 label 탭이 동작하지 않는 경우가 있어 시각적으로만 숨김 */
+  .vh{position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); border:0; opacity:0;}
+  .missing{outline:2px solid var(--warn); outline-offset:-2px; border-radius:4px;}
+  @media (max-width:480px){ .grid2{grid-template-columns:1fr;} .grid2 .full{grid-column:1;} }
+  @media (pointer:coarse){
+    .chip{padding:7px 14px; font-size:14px;}
+    .addph{padding:8px 12px; font-size:13.5px;}
+    .ph .del{width:26px; height:26px; font-size:15px; top:-8px; right:-8px;}
+  }
+  /* 사진 크게 보기 */
+  #lightbox{position:fixed; inset:0; z-index:900; background:rgba(0,0,0,.92); display:flex; align-items:center; justify-content:center;
+            padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);}
+  #lightbox img{max-width:100%; max-height:100%; object-fit:contain;}
+  #lightbox .close{position:absolute; top:calc(10px + env(safe-area-inset-top)); right:calc(10px + env(safe-area-inset-right)); width:40px; height:40px; border-radius:50%;
+            border:none; background:#fff; color:#000; font-size:22px; line-height:1;}
+  /* 파일 저장 준비 안내 (iOS 공유시트 재시도용) */
+  .modal{position:fixed; inset:0; z-index:950; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:16px;}
+  .modal .box{background:#fff; border-radius:12px; padding:18px; max-width:360px; width:100%; text-align:center;}
+  .modal .box p{margin:0 0 14px; font-size:14px;}
+  .modal .box button{display:block; width:100%; margin-top:8px; padding:12px; font:inherit; font-weight:700; border-radius:8px; border:1px solid #333; background:#fff;}
+  .modal .box button.primary{background:#111; color:#fff;}
+  /* 라이선스 잠금 화면 */
+  body.locked header, body.locked main, body.locked footer{display:none!important;}
+  #lock{position:fixed; inset:0; z-index:1000; background:#f4f4f4; overflow:auto; -webkit-overflow-scrolling:touch;
+        padding:calc(24px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));}
+  #lock .card{max-width:440px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  #lock .body{padding:18px;}
+  #lock h2{margin:0 0 4px; font-size:18px;}
+  #lock .co{font-size:12px; color:#666; margin-bottom:14px;}
+  #lock .lbl{font-size:12px; font-weight:700; color:#444; margin:14px 0 5px;}
+  #lock .devid{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:21px; font-weight:700; letter-spacing:1px; background:#f1f2f1;
+        border:1px solid #ccc; border-radius:8px; padding:10px; text-align:center; user-select:all; -webkit-user-select:all;}
+  #lock .row{display:flex; gap:8px; margin-top:8px;}
+  #lock button{flex:1; padding:11px 6px; font:inherit; font-size:14px; font-weight:700; border-radius:8px; border:1px solid #333; background:#fff; color:#111; cursor:pointer;}
+  #lock button.primary{background:#111; color:#fff;}
+  #lock textarea{font-family:ui-monospace,Menlo,Consolas,monospace; font-size:16px; min-height:90px; word-break:break-all;}
+  #lock .msg{font-size:13px; margin-top:10px; min-height:18px; font-weight:700;}
+  #lock .msg.err{color:var(--warn);} #lock .msg.ok{color:var(--ok);}
+  #lock .help{font-size:12px; color:#555; line-height:1.55; margin-top:14px; background:#fffbe6; border:1px solid #e6d87a; border-radius:6px; padding:8px 10px;}
+</style>
+</head>
+<body class="locked">
+<div id="lock"></div>
+<header>
+  <div class="hbar"><div></div><div></div><div></div><div></div><div></div><div></div></div>
+  <div class="htop">
+    <h1>건축물관리점검 현장 체크리스트</h1>
+    <span class="sub">우림구조엔지니어링</span>
+  </div>
+  <div class="progress">
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="ptext"><span id="ptext">0 / 0 항목</span><span id="savestat"></span></div>
+  </div>
+</header>
+<main id="main"></main>
+<footer>
+  <button onclick="showMissing()">미작성 확인</button>
+  <button onclick="exportJSON()">JSON 저장</button>
+  <button class="primary" onclick="exportReport()">요약보고서(HTML)</button>
+</footer>
+<input type="file" id="importFile" accept=".json,application/json" class="vh" onchange="importJSON(event)">
+
+<script>
+/* ============================================================
+   번호체계는 표준 세부점검표(3.1.1~3.5.10)와 1:1 대응.
+   각 항목 카드 = 보고서 "3장 점검세부항목별 점검내용" 1개 페이지
+                = 별지 제2호 서식의 소항목 1칸.
+   ============================================================ */
+
+/* ====== 선택지 정의 ====== */
+const CH = {
+  A: ['적합','부적합','도면없음','해당없음'],   /* 법규유지형 — 별지2 기입 시 '도면없음'은 해당없음(-) 처리 */
+  A3:['적합','부적합','해당없음'],             /* 별지2와 동일 3택 (내진·화재 마감재 등) */
+  B: ['양호','보통','미흡','불량','해당없음'],
+  C: ['인증','재인증','만료','해당없음'],
+  Y: ['예','아니오','기타','해당없음'],
+  E: ['우수','양호','보통','미흡','불량'],
+  E6:['우수','양호','보통','미흡','불량','해당없음'],
+  P: ['적합','부적합'],
+  CMP:['개선필요','해당없음'],
+  YN:['있음','없음'],
+  AG:['동의함','동의하지 않음']
+};
+const BADSET = new Set(['부적합','미흡','불량','아니오','만료','개선필요']);
+const NASET = new Set(['해당없음','기타','도면없음','없음']);
+
+/* ====== 점검항목 (표준 세부점검표 3.1.1 ~ 3.5.10 + 별지2 제6면) ====== */
+const FORM = [
+ {sec:'3.1 법규유지 ― 대지', ref:'별지2 제1면 · 세부점검표 3.1.1~3.1.5', items:[
+  {id:'d1', no:'3.1.1', t:'대지의 조경', law:'건축법 제42조', qs:[['조경면적 유지 여부','A']],
+   tip:'조경면적 변경 유형: 실외기·간이시설물·쓰레기분리시설·식재훼손·바닥포장 등. 기준면적은 건축물대장 기재사항으로 작성'},
+  {id:'d2', no:'3.1.2', t:'옥상의 조경', law:'건축법 제42조', qs:[['옥상조경 면적 유지 여부','A']]},
+  {id:'d3', no:'3.1.3', t:'공개공지 등의 확보', law:'건축법 제43조', qs:[['공개공지 면적 유지 여부','A']]},
+  {id:'d4', no:'3.1.4', t:'대지와 도로의 관계', law:'건축법 제44조', qs:[['대지와 도로의 관계 유지 여부','A']],
+   tip:'접도 폭·길이 확인'},
+  {id:'d5', no:'3.1.5', t:'건축선 유지', law:'건축법 제47조', qs:[['건축선 유지 여부','A']],
+   tip:'건축선 침범 점유물(입점매장 진열대·좌판 등) 확인'},
+ ]},
+ {sec:'3.1 법규유지 ― 높이 및 형태', ref:'별지2 제1면 · 세부점검표 3.1.6~3.1.11', items:[
+  {id:'h1', no:'3.1.6', t:'건폐율', law:'건축법 제55조', qs:[['건폐율 유지 여부','A']],
+   tip:'무단 증축·데크·천막·캐노피 설치 여부 확인'},
+  {id:'h2', no:'3.1.7', t:'용적률', law:'건축법 제56조', qs:[['용적률 유지 여부','A']],
+   tip:'옥탑·지붕층 무단 증축(천막·경량철골) 확인'},
+  {id:'h3', no:'3.1.8', t:'대지안의 공지', law:'건축법 제58조', qs:[['대지안의 공지 유지 여부','A']],
+   tip:'공지 내 실외기·환기덕트·적치물 확인'},
+  {id:'h4', no:'3.1.9', t:'구역별 높이제한', law:'건축법 제60조', qs:[['구역별 높이제한 유지 여부','A']]},
+  {id:'h5', no:'3.1.10', t:'일조확보 높이제한', law:'건축법 제61조', qs:[['일조확보 높이제한 유지 여부','A']],
+   tip:'전용·일반주거지역만 해당'},
+  {id:'h6', no:'3.1.11', t:'건축물 높이·외부형태', law:'건축법 제55~61조', qs:[['건축물 높이·외부형태 유지 여부','A']]},
+ ]},
+ {sec:'3.1 법규유지 ― 범죄예방', ref:'별지2 제1면 · 세부점검표 3.1.12~3.1.17', items:[
+  {id:'c1', no:'3.1.12', t:'접근통제', law:'건축법 제53조의2', qs:[['접근통제의 기준 유지 여부','B']],
+   tip:'범죄예방 기준은 허가일 2015.4.1. 이후 건축물만 해당 — 이전 건축물은 해당없음(사유 명기)'},
+  {id:'c2', no:'3.1.13', t:'영역성 확보', law:'건축법 제53조의2', qs:[['영역성 확보의 기준 유지 여부','B']]},
+  {id:'c3', no:'3.1.14', t:'조경기준', law:'건축법 제53조의2', qs:[['조경기준 유지 여부','B']]},
+  {id:'c4', no:'3.1.15', t:'조명기준', law:'건축법 제53조의2', qs:[['조명기준 유지 여부','B']]},
+  {id:'c5', no:'3.1.16', t:'세부기준 1', law:'건축법 제53조의2', qs:[
+    ['범죄예방기준 유지 여부 (100세대 이상 아파트 대상)','B'],
+    ['범죄예방기준 유지 여부 (다가구·다세대·연립주택, 100세대 미만 아파트, 오피스텔 대상)','B']]},
+  {id:'c6', no:'3.1.17', t:'세부기준 2', law:'건축법 제53조의2', qs:[
+    ['범죄예방기준 유지 여부 (문화 및 집회시설, 교육연구시설, 노유자시설, 수련시설 대상)','B'],
+    ['범죄예방기준 유지 여부 (24시간 일용품 판매 소매점 대상)','B'],
+    ['범죄예방기준 유지 여부 (다중생활시설 대상)','B']]},
+ ]},
+ {sec:'3.2 기능유지 ― 급/배수', ref:'별지2 제2면 · 세부점검표 3.2.1~3.2.2', items:[
+  {id:'w1', no:'3.2.1', t:'급수성능', law:'건축법 제62조', qs:[
+    ['급수압 상태 유지 여부','B'],
+    ['저수조(고가수조) 정기청소 및 위생점검 상태 유지 여부','B'],
+    ['급수펌프 및 밸브 작동상태 유지 여부','B']],
+   tip:'수도꼭지 급수테스트, 저수조 재질·청소기록, 펌프 외관·이상소음 확인. 기계설비법 성능점검 실시 시 생략 가능'},
+  {id:'w2', no:'3.2.2', t:'배수성능', law:'건축법 제62조', qs:[
+    ['배수상태 유지 여부','B'],
+    ['배수펌프 및 밸브 작동상태 유지 여부','B']],
+   tip:'세면대·주방 배수테스트, 집수정·배수펌프 확인'},
+ ]},
+ {sec:'3.2 기능유지 ― 냉난방/환기', ref:'별지2 제2면 · 세부점검표 3.2.3~3.2.5', items:[
+  {id:'v1', no:'3.2.3', t:'냉방성능', law:'건축법 제62조', qs:[['냉방설비 성능 유지 여부','B']],
+   tip:'개별/중앙 방식, 실외기 위치, 점검주기 확인'},
+  {id:'v2', no:'3.2.4', t:'난방성능', law:'건축법 제62조', qs:[['난방설비 성능 유지 여부','B']]},
+  {id:'v3', no:'3.2.5', t:'환기성능', law:'건축법 제62조', qs:[['환기설비 성능 유지 여부','B']],
+   tip:'기계식 환기설비(기계실·지하주차장) 확인'},
+ ]},
+ {sec:'3.2 기능유지 ― 전기설비·승강기', ref:'별지2 제2면 · 세부점검표 3.2.6~3.2.9', items:[
+  {id:'e1', no:'3.2.6', t:'피뢰성능', law:'건축법 제62조', qs:[['피뢰설비 성능 유지 여부','B']],
+   tip:'옥상 피뢰침 부식·손상 확인'},
+  {id:'e2', no:'3.2.7', t:'방송수신성능', law:'건축법 제62조', qs:[['방송수신설비 성능 유지 여부','B']],
+   tip:'피뢰침과의 이격 확인'},
+  {id:'e3', no:'3.2.8', t:'수배전·발전설비 성능', law:'건축법 제62조', qs:[['수배전·변압·발전설비 성능 유지 여부','B']],
+   tip:'전기설비 점검일지(전기안전관리자) 확인'},
+  {id:'e4', no:'3.2.9', t:'승강기 성능', law:'건축법 제64조', qs:[['승강기 성능 유지 여부','B']],
+   tip:'승강기 대수, 내부 점검필증(자체점검·공단검사) 확인'},
+ ]},
+ {sec:'3.3 에너지 및 친환경 ― 열손실방지', ref:'별지2 제3면 · 세부점검표 3.3.1', items:[
+  {id:'g1', no:'3.3.1', t:'건물에너지', law:'녹색건축법 제15조, 제15조의2', qs:[
+    ['단열성능 유지 여부','B'],['결로방지성능 유지 여부','B'],['기밀성능 유지 여부','B']],
+   tip:'창호 유리 사양(복층 등), 열화상카메라 촬영, 청문(결로·바람새는 소리) 확인'},
+ ]},
+ {sec:'3.3 에너지 및 친환경 ― 친환경 인증', ref:'별지2 제3면 · 세부점검표 3.3.2', items:[
+  {id:'g2', no:'3.3.2', t:'인증여부', law:'건축법 제65조의2, 녹색건축법 제16·17조', qs:[
+    ['지능형건축물 인증 유지 여부','C'],['에너지효율등급 인증 유지 여부','C'],
+    ['제로에너지건축물 인증 유지 여부','C'],['녹색건축물 인증 유지 여부','C']],
+   tip:'건축물대장 인증 기재사항 확인'},
+ ]},
+ {sec:'3.4 구조안전 ― 대지안전', ref:'별지2 제4면 · 세부점검표 3.4.1~3.4.4', items:[
+  {id:'s1', no:'3.4.1', t:'옹벽·석축 등 사면·절개지 등', law:'건축법 제40조', qs:[
+    ['옹벽·석축 등의 안전 유지 여부','B'],['사면·절개지 등의 안전 유지 여부','B']],
+   tip:'배치도로 옹벽·석축 계획 여부 확인 — 없으면 해당없음'},
+  {id:'s2', no:'3.4.2', t:'담장', law:'건축법 제40조', qs:[['담장 안전상태 유지 여부','B']],
+   tip:'기울음·파손·균열 확인'},
+  {id:'s3', no:'3.4.3', t:'지반침하', law:'건축법 제40조', qs:[['지반침하 여부','B']],
+   tip:'인근 도로·외부 바닥포장·건물 하부 균열 확인'},
+  {id:'s4', no:'3.4.4', t:'대지배수', law:'건축법 제40조', qs:[['배수시설 상태 유지 여부','B']],
+   tip:'집수정·배수펌프·우수 유출 흔적 확인'},
+ ]},
+ {sec:'3.4 구조안전 ― 연직하중', ref:'별지2 제4면 · 세부점검표 3.4.5~3.4.8', items:[
+  {id:'s5', no:'3.4.5', t:'구조부재 육안점검', law:'건축법 제48조', qs:[['구조부재 안전성능 유지 여부','B']],
+   tip:'보·기둥·벽체·슬래브: 균열(위치/방향/폭㎜)·누수·철근노출·박리박락. 부위별 사진+균열폭 측정 필수. 철골부 마감재 피복 여부 기록'},
+  {id:'s6', no:'3.4.6', t:'이상징후 청문점검', law:'건축법 제48조', qs:[['이상징후 발생 여부','B']],
+   tip:'관리자·거주자 청문: 진동·이상소음·문틀 뒤틀림·누수 이력·유지관리 현황'},
+  {id:'s7', no:'3.4.7', t:'마감재 육안점검', law:'건축법 제48조', qs:[['마감재 노후화 여부','B']],
+   tip:'외벽 마감재 종류(석재·페인트 등)·박리·탈락 확인'},
+  {id:'s8', no:'3.4.8', t:'구조·용도변경', law:'건축법 제48조', qs:[['구조변경 여부','B'],['용도변경 여부','B']],
+   tip:'건축물대장 변경이력과 현장 대조 — 무단 증축·용도변경·구조변경 확인'},
+ ]},
+ {sec:'3.4 구조안전 ― 지진하중', ref:'별지2 제4면 · 세부점검표 3.4.9', items:[
+  {id:'s9', no:'3.4.9', t:'내진성능', law:'건축법 제48조', qs:[['내진설계 적용 여부','A3']],
+   tip:'건축물대장 내진설계 적용 여부·내진능력 기재 확인'},
+ ]},
+ {sec:'3.5 화재안전 ― 피난성능', ref:'별지2 제5면 · 세부점검표 3.5.1~3.5.3', items:[
+  {id:'f1', no:'3.5.1', t:'실내피난성능', law:'건축법 제49조', qs:[
+    ['복도의 성능 유지 여부','B'],['계단의 성능 유지 여부','B'],['출입구의 성능 유지 여부','B']],
+   tip:'피난통로 적치물, 피난 보행거리(계단까지/계단에서 출구까지), 방화문 상시닫힘 확인'},
+  {id:'f2', no:'3.5.2', t:'옥상광장', law:'건축법 제49조', qs:[['옥상광장 피난성능 유지 여부','B']],
+   tip:'옥상 출입문 개폐, 적치물 확인'},
+  {id:'f3', no:'3.5.3', t:'피난안전구역', law:'건축법 제50조의2', qs:[['피난안전구역 성능 유지 여부','B']],
+   tip:'초고층·준초고층만 해당 — 그 외 해당없음'},
+ ]},
+ {sec:'3.5 화재안전 ― 화재확산 방지', ref:'별지2 제5면 · 세부점검표 3.5.4~3.5.6', items:[
+  {id:'f4', no:'3.5.4', t:'방화구획', law:'건축법 제49조', qs:[
+    ['층간 방화구획 관통부위 등 내화채움성능 구조','B'],['면적별 방화구획 성능 유지 여부','B']],
+   tip:'슬래브·벽체 관통부 내화채움재 시공 여부, 방화셔터·방화문 확인'},
+  {id:'f5', no:'3.5.5', t:'마감재', law:'건축법 제52조', qs:[
+    ['내부마감재 성능 유지 여부 (바닥면적 200㎡ 초과 시 등)','A3'],['외벽마감재 성능 유지 여부','A3']],
+   tip:'마감재 불연성 성적서 구비 여부 확인 (스프링클러 설치 시 완화규정)'},
+  {id:'f6', no:'3.5.6', t:'배연성능', law:'건축법 제49조', qs:[
+    ['배연창 성능 유지 여부','B'],['배연설비 등 성능 유지 여부','B'],['거실 반자높이의 유지 여부','B']],
+   tip:'6층 이상 판매·영업시설 등 배연설비 의무 — 계단실 제연댐퍼 확인'},
+ ]},
+ {sec:'3.5 화재안전 ― 내화구조', ref:'별지2 제5면 · 세부점검표 3.5.7~3.5.10', items:[
+  {id:'f7', no:'3.5.7', t:'내화구조', law:'건축법 제50조', qs:[
+    ['내화구조 성능 유지 여부','B'],['방화벽 성능 유지 여부','B']],
+   tip:'내화피복(콘크리트·뿜칠) 탈락 여부 확인'},
+  {id:'f8', no:'3.5.8', t:'외벽·창호', law:'건축법 제51조', qs:[
+    ['외벽 내화성능 유지 여부','B'],['창호 방화성능 유지 여부','B']],
+   tip:'방화지구 안 건축물 해당 여부 확인'},
+  {id:'f9', no:'3.5.9', t:'실내건축', law:'건축법 제52조의2', qs:[['실내건축의 성능 유지 여부','B']]},
+  {id:'f10', no:'3.5.10', t:'지하층', law:'건축법 제53조', qs:[
+    ['지하층 소화설비 성능 유지 여부','B'],['지하층 피난구, 피난계단 성능 유지 여부','B']]},
+ ]},
+ {sec:'건축물관리계획 수립·이행', ref:'별지2 제6면', items:[
+  {id:'p1', no:'별지2-6면', t:'건축물관리계획의 수립 및 이행 적합 여부', law:'건축물관리법 제11조', nocmp:true, qs:[
+    ['건축물 현황','P'],['건축주, 설계자, 시공자, 감리자 및 관리자','P'],
+    ['건축물 마감재 및 건축물에 부착된 제품','P'],['장기수선계획','P'],
+    ['건축물 화재 및 피난 안전','P'],['건축물 구조안전 및 내진능력','P'],
+    ['에너지 및 친환경 성능관리','P'],['기타사항','P']],
+   tip:'관리자에게 건축물관리계획 서류 요청하여 확인'},
+ ]},
+];
+
+/* 그 밖의 항목 이행여부 (별지 제1호 뒷면) */
+const OTHERS = [
+ '「시설물의 안전 및 유지관리에 관한 특별법」 제11조에 따른 안전점검 이행 여부',
+ '「화재의 예방 및 안전관리에 관한 법률」 등에 따른 소방시설등의 자체점검 등 이행 여부',
+ '「수도법」 제33조에 따른 위생상의 조치 이행 여부',
+ '「승강기 안전관리법」 제28조·제32조에 따른 승강기 설치검사 및 안전검사 이행 여부',
+ '「에너지이용 합리화법」 제39조에 따른 검사대상기기의 검사 이행 여부',
+ '「전기안전관리법」 제12조에 따른 일반용전기설비의 점검 이행 여부',
+ '「하수도법」 제39조에 따른 개인하수처리시설의 운영·관리 이행 여부',
+ '「공동주택관리법」 제33조·제34조에 따른 안전점검 및 소규모 공동주택 안전관리 이행 여부',
+ '「도시가스사업법」 제17조에 따른 정기검사 및 수시검사 이행 여부',
+ '「도시 및 주거환경정비법」 제12조에 따른 안전진단 이행 여부',
+ '「건축법」 제22조에 따라 사용승인 신청 시 제출된 설계도서의 내용대로 유지·관리되는지 여부',
+ '건축물의 안전 강화 및 에너지 절감을 위하여 보완해야 할 사항이 있는지 여부',
+];
+
+/* 공작물 점검 (별지 제3호 — 대상 공작물이 있는 경우) */
+const GONG = [
+ {id:'gk1', t:'옹벽·석축 (높이 2m 초과)'},
+ {id:'gk2', t:'담장 (높이 2m 초과)'},
+ {id:'gk3', t:'굴뚝 (높이 6m 초과)'},
+ {id:'gk4', t:'광고탑·광고판 (높이 4m 초과)'},
+ {id:'gk5', t:'고가수조 (높이 8m 초과)'},
+ {id:'gk6', t:'기계식 주차장'},
+ {id:'gk7', t:'태양에너지 발전설비 등 기타 공작물'},
+];
+
+/* 구조안전 강화점검 (사용승인 20년 경과 최초 정기점검 시 — 지침 제15조②) */
+const STRENGTHEN = [
+ {id:'st1', t:'주요구조부 (16개소 이상)', qs:[['주요구조부 균열 및 누수 상태','E'],['주요구조부 부식 및 열화 등 상태','E']],
+  tip:'육안점검 어려운 부위는 마감재 일부 해체 또는 전자내시경 활용. 층별·부재별·조사부위별 16개소 이상. 위치/부재/결함/폭/원인 기록'},
+ {id:'st2', t:'건물기울기', qs:[['건물기울기 측정','E6']],
+  tip:'측정 가능한 건축물 외벽 모서리 전체 (부동침하기울기와 택1 가능 — 사유 명기)'},
+ {id:'st3', t:'부동침하기울기 (2개소 이상)', qs:[['부동침하 기울기 측정','E6']],
+  tip:'최하층 바닥 또는 천장슬래브에서 장변·단변 방향 각 2개소 이상, 변위비 기록'},
+ {id:'st4', t:'부재변형', qs:[['부재변형 상태','E6']],
+  tip:'균열·처짐 발생(가능) 주요 부위 — 최대변위량·변위비 기록'},
+ {id:'st5', t:'콘크리트 비파괴강도 (8개소 이상)', qs:[['콘크리트 비파괴강도 시험','E6']],
+  tip:'반발경도시험 위주, 8개소 이상. 설계기준강도(도면) 대비 평균추정강도 기록'},
+];
+
+/* 사전준비 자료 (지침 제14조) */
+const PREP = [
+ '사용승인 설계도서 및 각종 인증자료 (변경허가·신고 자료 포함)',
+ '건축물대장 (면적·용도·내진설계·인증·변경이력 확인)',
+ '건축물 생애관리대장, 건축물관리계획',
+ '건축설비 점검문서, 내·외장재료 시험성적서 또는 인증서',
+ '과거 건축물관리점검 보고서',
+ '현황도서 (배치도·평면도 — 설계도서 없는 경우)',
+ '타 법령 점검·검사 서류 (소방·승강기·전기·저수조 등 → "그 밖의 항목" 일자 기입용)',
+ '점검장비 (균열폭측정기, 거리측정기, 줄자, 열화상카메라, 반발경도시험기 등)',
+ '점검책임자·점검자 인적사항 및 교육이수증',
+];
+
+/* 필수 사진 목록 */
+const PHOTO_REQ = [
+ '건축물 전경 (정면·배면·좌측면·우측면)',
+ '건축물 명판·주소 표지',
+ '대지·조경·공개공지 현황',
+ '주차장·대지안의 공지 현황',
+ '지적사항 부위 (균열·누수·박리 등 — 근접 + 위치 파악용 원경)',
+ '균열폭 측정 장면 (측정기 눈금 포함)',
+ '기계실·전기실·승강기·저수조 등 설비',
+ '피난계단·복도·방화문·방화구획 관통부',
+ '옥상 (조경·피뢰침·방송수신설비·물탱크)',
+ '지하층 (주차장·소화설비·피난계단)',
+ '공작물 (해당 시: 옹벽·굴뚝·광고탑 등)',
+];
+
+/* ====== 기기 환경 ====== */
+/* iPadOS 13+ 는 데스크톱 Safari(MacIntel)로 표시되므로 터치포인트로 구분 */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const IS_TOUCH = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || navigator.maxTouchPoints > 0;
+
+/* 저장공간 영구 보존 요청 (iOS·Android에서 자동 삭제 방지) */
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+
+/* https 로 배포된 경우 오프라인 사용(지하층 등 통신 불가 구역)을 위한 서비스워커 등록 */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+/* 모바일 키보드가 올라오면 하단 고정 버튼 숨김 (입력창 가림 방지) */
+if (IS_TOUCH) {
+  document.addEventListener('focusin', e => { if (e.target.matches('input[type=text],input[type=number],input[type=date],textarea,.ph input')) document.body.classList.add('kb'); });
+  document.addEventListener('focusout', () => document.body.classList.remove('kb'));
+}
+
+/* ====== 상태 관리 ====== */
+const LS_KEY = 'bldchk_v2';
+let S = {meta:{}, ans:{}, cmp:{}, cnt:{}, memo:{}, cap:{}, others:{}, otherNote:{}, prep:{}, sum:{}, use20:false, hasGong:false};
+try { const saved = localStorage.getItem(LS_KEY); if (saved) S = Object.assign(S, JSON.parse(saved)); } catch(e){}
+
+let db = null;
+try {
+  const dbReq = indexedDB.open('bldchk', 1);
+  dbReq.onupgradeneeded = e => { e.target.result.createObjectStore('photos'); };
+  dbReq.onsuccess = e => { db = e.target.result; renderAllPhotos(); };
+  dbReq.onerror = () => { db = null; };
+} catch(e) { db = null; }
+
+let storageOK = true;
+function storageWarn(){
+  if (document.getElementById('storagewarn')) return;
+  const w = document.createElement('div'); w.id = 'storagewarn';
+  w.style.cssText = 'background:#c62828;color:#fff;font-size:12px;padding:7px 12px;font-weight:700;';
+  w.textContent = '⚠ 이 방식으로 열면 자동저장이 되지 않습니다! 작성 중 수시로 [JSON 저장]을 눌러 백업하고, 화면을 닫거나 새로고침하지 마세요. ' +
+    (IS_IOS ? '(iPhone/iPad는 Safari로 웹주소를 열고 [공유 → 홈 화면에 추가] 후 홈 화면 아이콘으로 실행하세요. 개인정보 보호 브라우징에서는 저장되지 않습니다)'
+            : '(Chrome 주소창에 file:/// 경로로 열면 자동저장 됩니다)');
+  document.querySelector('header').appendChild(w);
+}
+function save(){
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(S));
+    const el = document.getElementById('savestat');
+    el.textContent = '자동저장 ' + new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) {
+    if (storageOK) { storageOK = false; storageWarn(); }
+    document.getElementById('savestat').textContent = '⚠ 자동저장 불가';
+  }
+  updateProgress();
+}
+/* 시작 시 저장소 사용 가능 여부 검사 */
+try { localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }
+catch(e){ storageOK = false; window.addEventListener('DOMContentLoaded', storageWarn); }
+
+/* ====== 공용 렌더링 ====== */
+const M = document.getElementById('main');
+
+function chipRowGeneric(store, key, choiceKey, onSel){
+  const wrap = document.createElement('div'); wrap.className = 'chips';
+  CH[choiceKey].forEach(c => {
+    const b = document.createElement('span'); b.className = 'chip'; b.textContent = c;
+    if (store[key] === c) b.classList.add('sel', BADSET.has(c) ? 'bad' : NASET.has(c) ? 'na' : 'x');
+    b.onclick = () => {
+      store[key] = (store[key] === c) ? undefined : c;
+      wrap.querySelectorAll('.chip').forEach(x => x.className = 'chip');
+      if (store[key]) b.classList.add('sel', BADSET.has(c) ? 'bad' : NASET.has(c) ? 'na' : 'x');
+      save();
+      if (onSel) onSel(store[key]);
+    };
+    wrap.appendChild(b);
+  });
+  return wrap;
+}
+const chipRow = (qid, ck) => chipRowGeneric(S.ans, qid, ck);
+
+function memoBox(id, key, ph){
+  const t = document.createElement('textarea'); t.placeholder = ph;
+  t.value = (S.memo[id] && S.memo[id][key]) || '';
+  t.oninput = () => { S.memo[id] = S.memo[id] || {}; S.memo[id][key] = t.value; save(); };
+  return t;
+}
+
+function photoBlock(itemId){
+  const box = document.createElement('div');
+  const list = document.createElement('div'); list.className = 'photos'; list.id = 'ph_' + itemId;
+  box.appendChild(list);
+  /* capture 속성이 있으면 iOS·Android는 카메라만 열리므로 '촬영'과 '앨범'을 분리 */
+  const mk = (text, cam) => {
+    const add = document.createElement('label'); add.className = 'addph'; add.textContent = text;
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.className = 'vh';
+    if (cam) inp.setAttribute('capture', 'environment'); else inp.multiple = true;
+    inp.onchange = async ev => {
+      for (const f of Array.from(ev.target.files)) await addPhoto(itemId, f);
+      ev.target.value = '';
+    };
+    add.appendChild(inp);
+    box.appendChild(add);
+  };
+  if (IS_TOUCH) { mk('📷 촬영', true); mk('🖼 앨범에서 선택', false); }
+  else mk('📷 사진 추가', false);
+  return box;
+}
+function showPhoto(src){
+  const lb = document.createElement('div'); lb.id = 'lightbox';
+  const im = document.createElement('img'); im.src = src;
+  const x = document.createElement('button'); x.className = 'close'; x.textContent = '×';
+  lb.onclick = () => lb.remove();
+  lb.appendChild(im); lb.appendChild(x);
+  document.body.appendChild(lb);
+}
+async function addPhoto(itemId, file){
+  if (!db) { alert('이 열기 방식에서는 사진 저장이 지원되지 않습니다.\n' +
+    (IS_IOS ? 'Safari로 웹주소를 열어 홈 화면에 추가한 뒤 사용하거나(개인정보 보호 브라우징 제외), ' : 'Chrome 주소창에 file:/// 경로로 열거나, ') +
+    '휴대폰 카메라로 직접 촬영 후 사무실에서 정리해 주세요.'); return; }
+  const img = await shrink(file, 1600, 0.82);
+  if (!img) { alert('이미지를 읽을 수 없습니다: ' + file.name); return; }
+  const pid = itemId + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+  db.transaction('photos','readwrite').objectStore('photos').put(img, pid);
+  S.cap[pid] = ''; save();
+  renderPhotos(itemId);
+}
+function shrink(file, maxW, q){
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      const sc = Math.min(1, maxW / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      res(cv.toDataURL('image/jpeg', q));
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => { URL.revokeObjectURL(img.src); res(null); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+function renderPhotos(itemId){
+  const list = document.getElementById('ph_' + itemId);
+  if (!list || !db) return;
+  const tx = db.transaction('photos').objectStore('photos');
+  const keys = Object.keys(S.cap).filter(k => k.startsWith(itemId + '_'));
+  list.innerHTML = '';
+  keys.forEach(pid => {
+    tx.get(pid).onsuccess = e => {
+      if (!e.target.result) return;
+      const d = document.createElement('div'); d.className = 'ph';
+      const im = document.createElement('img'); im.src = e.target.result;
+      im.onclick = () => showPhoto(im.src);
+      const del = document.createElement('button'); del.className = 'del'; del.textContent = '×';
+      del.onclick = () => { if (confirm('사진을 삭제할까요?')) { db.transaction('photos','readwrite').objectStore('photos').delete(pid); delete S.cap[pid]; save(); renderPhotos(itemId); } };
+      const cap = document.createElement('input'); cap.placeholder = '위치/내용'; cap.value = S.cap[pid] || '';
+      cap.oninput = () => { S.cap[pid] = cap.value; save(); };
+      d.appendChild(im); d.appendChild(del); d.appendChild(cap);
+      list.appendChild(d);
+    };
+  });
+}
+function renderAllPhotos(){
+  document.querySelectorAll('[id^=ph_]').forEach(el => renderPhotos(el.id.slice(3)));
+}
+
+function metaField(key, label, type, ph){
+  const f = document.createElement('div'); f.className = 'field';
+  const l = document.createElement('label'); l.textContent = label;
+  const i = document.createElement('input'); i.type = type || 'text';
+  if (ph) i.placeholder = ph;
+  i.value = S.meta[key] || '';
+  i.oninput = () => { S.meta[key] = i.value; save(); };
+  f.appendChild(l); f.appendChild(i);
+  return f;
+}
+
+function section(title, id, ref){
+  const d = document.createElement('details'); d.className = 'sec'; d.id = 'sec_' + id; d.open = false;
+  const s = document.createElement('summary');
+  s.innerHTML = '<span>' + title + (ref ? '<span class="ref">' + ref + '</span>' : '') + '</span><span class="cnt" id="cnt_' + id + '"></span>';
+  d.appendChild(s);
+  return d;
+}
+
+function tipEl(text){
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.textContent = '☞ ' + text;
+  return tip;
+}
+
+/* 항목 카드 (세부점검표 1페이지 대응) */
+function itemCard(item, opts){
+  opts = opts || {};
+  const it = document.createElement('div'); it.className = 'item'; it.id = 'item_' + item.id;
+  const tt = document.createElement('div'); tt.className = 'ititle';
+  tt.innerHTML = '<span>' + (item.no ? '<span class="no">' + item.no + '</span>' : '') + item.t + '</span>' +
+                 (item.law ? '<span class="law">' + item.law + '</span>' : '');
+  it.appendChild(tt);
+  if (item.tip) it.appendChild(tipEl(item.tip));
+  item.qs.forEach(([q, ch], qi) => {
+    const qd = document.createElement('div'); qd.className = 'q';
+    const ql = document.createElement('div'); ql.className = 'qtext'; ql.textContent = q;
+    qd.appendChild(ql); qd.appendChild(chipRow(item.id + '_q' + qi, ch));
+    it.appendChild(qd);
+  });
+  if (!item.nocmp && !opts.nocmp) {
+    const cd = document.createElement('div'); cd.className = 'cmp';
+    const cl = document.createElement('div'); cl.className = 'qtext'; cl.textContent = '현행 기준과의 비교·검토';
+    cd.appendChild(cl);
+    cd.appendChild(chipRowGeneric(S.cmp, item.id, 'CMP'));
+    it.appendChild(cd);
+  }
+  if (!opts.nocnt) {
+    const cr = document.createElement('div'); cr.className = 'cntrow';
+    const cl2 = document.createElement('label'); cl2.textContent = '지적 건수';
+    const ci = document.createElement('input'); ci.type = 'number'; ci.min = '0'; ci.placeholder = '0';
+    ci.value = S.cnt[item.id] || '';
+    ci.oninput = () => { S.cnt[item.id] = ci.value; save(); };
+    const hint = document.createElement('span'); hint.style.cssText = 'font-size:11px;color:#888';
+    hint.textContent = '(별지2 "( )건" 기입용 — 해당없음이면 비워두기)';
+    cr.appendChild(cl2); cr.appendChild(ci); cr.appendChild(hint);
+    it.appendChild(cr);
+  }
+  const m1 = document.createElement('div'); m1.className = 'memo-label';
+  m1.textContent = opts.memoLabel || '개선사항(위법) / 성능개선사항 / 점검현황 메모';
+  it.appendChild(m1);
+  if (!opts.singleMemo) {
+    it.appendChild(memoBox(item.id, 'v', '개선사항(위법) — 없으면 비워두기'));
+    it.appendChild(memoBox(item.id, 'p', '성능개선사항·점검현황 메모 — 없으면 비워두기'));
+  } else {
+    it.appendChild(memoBox(item.id, 'v', opts.memoPh || '점검결과·측정값 및 의견'));
+  }
+  it.appendChild(photoBlock(item.id));
+  return it;
+}
+
+/* ====== 화면 구성 ====== */
+function build(){
+  /* 0. 점검 개요 (별지1 대응) */
+  const s0 = section('0. 점검 개요 / 건축물 정보', 'meta', '별지 제1호 기입 항목'); s0.open = true;
+  const sh1 = document.createElement('div'); sh1.className = 'subhead'; sh1.textContent = '점검 기본정보';
+  s0.appendChild(sh1);
+  const g1 = document.createElement('div'); g1.className = 'grid2';
+  [['date','점검일자','date'],['period','점검기간','text','예: 2026.08.01. ~ 2026.08.14.'],
+   ['chief','점검책임자'],['insp','점검자(참여자)']]
+   .forEach(a => g1.appendChild(metaField(...a)));
+  s0.appendChild(g1);
+  const sh2 = document.createElement('div'); sh2.className = 'subhead'; sh2.textContent = '관리자(소유자) — 별지1 상단';
+  s0.appendChild(sh2);
+  const g2 = document.createElement('div'); g2.className = 'grid2';
+  [['mgr','성명'],['mgrtel','전화번호'],['mgrco','회사명(관리단 등)'],['mgrcono','법인등록번호'],
+   ['mgraddr','주소'],['mgremail','전자우편 주소']]
+   .forEach(a => g2.appendChild(metaField(...a)));
+  const agf = document.createElement('div'); agf.className = 'field full';
+  const agl = document.createElement('label'); agl.textContent = '전자우편 송달동의 (행정절차법 제14조)';
+  agf.appendChild(agl); agf.appendChild(chipRowGeneric(S.meta, 'mgragree', 'AG'));
+  g2.appendChild(agf);
+  s0.appendChild(g2);
+  const sh3 = document.createElement('div'); sh3.className = 'subhead'; sh3.textContent = '건축물 개요 — 별지1 중단 (건축물대장 대조)';
+  s0.appendChild(sh3);
+  const g3 = document.createElement('div'); g3.className = 'grid2';
+  [['bname','건축물 명칭'],['baddr','건축물 위치(대지위치)'],['use','주 용도'],['struct','구조형식'],
+   ['siteArea','대지면적(㎡)'],['bldArea','건축면적(㎡)'],['area','연면적(㎡)'],['floors','층수 (예: 지하1/지상5)'],
+   ['zone','용도지역'],['district','용도지구/구역'],['units','세대수(호수)'],['appr','사용승인일','date'],
+   ['years','경과년수 (예: 약 21년)'],['grade','전차 점검등급'],['gongsum','공작물 개요 (없으면 "없음")'],['elev','승강기 대수']]
+   .forEach(a => g3.appendChild(metaField(...a)));
+  s0.appendChild(g3);
+  const tg = document.createElement('div'); tg.className = 'toggle-row';
+  const lb = document.createElement('label');
+  const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!S.use20;
+  cb.onchange = () => { S.use20 = cb.checked; document.getElementById('sec_st').classList.toggle('hidden', !cb.checked); save(); };
+  lb.appendChild(cb); lb.appendChild(document.createTextNode(' 사용승인 후 20년 경과 건축물의 최초 정기점검 (구조안전 강화점검 대상)'));
+  tg.appendChild(lb);
+  const tg2 = document.createElement('div'); tg2.className = 'toggle-row';
+  const lb2 = document.createElement('label');
+  const cb2 = document.createElement('input'); cb2.type = 'checkbox'; cb2.checked = !!S.hasGong;
+  cb2.onchange = () => { S.hasGong = cb2.checked; document.getElementById('sec_gong').classList.toggle('hidden', !cb2.checked); save(); };
+  lb2.appendChild(cb2); lb2.appendChild(document.createTextNode(' 대상 공작물 있음 (옹벽·굴뚝·광고탑 등 — 별지 제3호 공작물 점검표 작성 대상)'));
+  tg2.appendChild(lb2);
+  s0.appendChild(tg); s0.appendChild(tg2);
+  M.appendChild(s0);
+
+  /* 1. 사전 준비 */
+  const s1 = section('1. 사전 준비·자료수집', 'prep', '지침 제14조');
+  PREP.forEach((p, i) => {
+    const it = document.createElement('div'); it.className = 'item';
+    const q = document.createElement('div'); q.className = 'qtext'; q.textContent = p;
+    const row = document.createElement('div'); row.className = 'chips';
+    const c = document.createElement('span'); c.className = 'chip' + (S.prep[i] ? ' sel' : '');
+    c.textContent = S.prep[i] ? '✓ 확보' : '미확보';
+    c.onclick = () => { S.prep[i] = !S.prep[i]; c.className = 'chip' + (S.prep[i] ? ' sel' : ''); c.textContent = S.prep[i] ? '✓ 확보' : '미확보'; save(); };
+    it.appendChild(q); row.appendChild(c); it.appendChild(row);
+    s1.appendChild(it);
+  });
+  M.appendChild(s1);
+
+  /* 2. 항목별 점검 (3.1.1 ~ 3.5.10 + 별지2 제6면) */
+  FORM.forEach((grp, gi) => {
+    const sd = section(grp.sec, 'g' + gi, grp.ref);
+    grp.items.forEach(item => sd.appendChild(itemCard(item, item.id === 'p1' ? {nocnt:true} : {})));
+    M.appendChild(sd);
+  });
+
+  /* 3. 그 밖의 항목 이행여부 */
+  const s3 = section('그 밖의 항목에 대한 이행여부', 'oth', '별지 제1호 뒷면 · 12개 확인대상');
+  OTHERS.forEach((o, i) => {
+    const it = document.createElement('div'); it.className = 'item'; it.id = 'item_oth' + i;
+    const q = document.createElement('div'); q.className = 'qtext'; q.textContent = (i + 1) + '. ' + o;
+    it.appendChild(q);
+    it.appendChild(chipRowGeneric(S.others, i, 'Y'));
+    const t = document.createElement('textarea'); t.placeholder = '점검·검사 일자 / 기타 사유';
+    t.value = S.otherNote[i] || '';
+    t.oninput = () => { S.otherNote[i] = t.value; save(); };
+    it.appendChild(t);
+    s3.appendChild(it);
+  });
+  M.appendChild(s3);
+
+  /* 4. 공작물 점검 (별지 제3호) */
+  const s4 = section('공작물 점검', 'gong', '별지 제3호 — 대상 공작물 있는 경우');
+  if (!S.hasGong) s4.classList.add('hidden');
+  GONG.forEach(g => {
+    s4.appendChild(itemCard({id:g.id, t:g.t, qs:[['상태 및 안전성 유지 여부','B']]},
+      {nocmp:true, nocnt:true, singleMemo:true, memoLabel:'규모·위치·상태 메모', memoPh:'규모(높이·길이)/위치/상태 — 해당없으면 비워두기'}));
+  });
+  M.appendChild(s4);
+
+  /* 5. 구조안전 강화점검 */
+  const s5 = section('구조안전 강화점검', 'st', '지침 제15조② — 20년 경과 최초 정기점검 시');
+  if (!S.use20) s5.classList.add('hidden');
+  STRENGTHEN.forEach(item => {
+    s5.appendChild(itemCard(item, {nocmp:true, nocnt:true, singleMemo:true,
+      memoLabel:'측정값·점검결과 및 의견', memoPh:'위치/부재/측정값/등급 — 예: 지하1층 벽체 수직균열 폭0.2mm 건조수축'}));
+  });
+  M.appendChild(s5);
+
+  /* 6. 필수 사진 */
+  const s6 = section('필수 사진 체크', 'phr', '누락 방지용');
+  PHOTO_REQ.forEach((p, i) => {
+    const it = document.createElement('div'); it.className = 'item';
+    const q = document.createElement('div'); q.className = 'qtext'; q.textContent = p;
+    const row = document.createElement('div'); row.className = 'chips';
+    const c = document.createElement('span'); c.className = 'chip' + (S.sum['ph' + i] ? ' sel' : '');
+    c.textContent = S.sum['ph' + i] ? '✓ 촬영' : '미촬영';
+    c.onclick = () => { S.sum['ph' + i] = !S.sum['ph' + i]; c.className = 'chip' + (S.sum['ph' + i] ? ' sel' : ''); c.textContent = S.sum['ph' + i] ? '✓ 촬영' : '미촬영'; save(); };
+    it.appendChild(q); row.appendChild(c); it.appendChild(row);
+    s6.appendChild(it);
+  });
+  const g6 = document.createElement('div'); g6.className = 'item';
+  g6.appendChild(photoBlock('general'));
+  s6.appendChild(g6);
+  M.appendChild(s6);
+
+  /* 7. 종합 메모 */
+  const s7 = section('종합 메모 (사무실 작성용)', 'sum', '별지1 종합의견 · 주요개선방안 초안');
+  const it7 = document.createElement('div'); it7.className = 'item';
+  [['major','중대결함 여부 및 내용'],['func','기능유지 종합 (급배수/냉난방/전기)'],['energy','에너지 절감'],
+   ['fire','화재안전 강화'],['struct','구조안전 강화'],['etc','그 밖의 방안(수명연장 등)'],['overall','종합의견 초안']]
+   .forEach(([k, l]) => {
+     const lab = document.createElement('div'); lab.className = 'memo-label'; lab.textContent = l;
+     const t = document.createElement('textarea'); t.value = S.sum[k] || '';
+     t.oninput = () => { S.sum[k] = t.value; save(); };
+     it7.appendChild(lab); it7.appendChild(t);
+   });
+  s7.appendChild(it7);
+  M.appendChild(s7);
+
+  const note = document.createElement('div'); note.className = 'note';
+  note.innerHTML = '체크리스트 번호(3.1.1~3.5.10)는 보고서 <b>"3장 점검세부항목별 점검내용"</b> 및 <b>별지 제2호 서식</b>과 1:1 대응합니다. ' +
+    '판단결과·비교검토·지적건수·사진을 채우면 별지1·별지2·세부점검표 작성에 필요한 현장정보가 모두 확보됩니다. ' +
+    '(항목별 점수·등급 산정과 개선방안 근거법령은 사무실 평가 단계에서 작성)<br>' +
+    '입력 내용은 이 기기(브라우저)에 자동저장됩니다. 점검 완료 후 <b>[JSON 저장]</b>으로 백업하고, <b>[요약보고서]</b>를 저장해 BLCM(blcm.go.kr) 입력 시 참조하세요. ' +
+    '다른 기기에서 이어서 작성: <a href="#" onclick="document.getElementById(\'importFile\').click();return false;">JSON 불러오기</a>' +
+    '<br><span id="licinfo" style="font-size:11px;color:#888"></span>';
+  M.appendChild(note);
+}
+
+/* ====== 진행률 / 미작성 ====== */
+function itemUnits(){
+  /* [key, kind] 목록: kind ans|cmp|oth */
+  const u = [];
+  FORM.forEach(g => g.items.forEach(it => {
+    it.qs.forEach((q, qi) => u.push(['ans', it.id + '_q' + qi, it.id]));
+    if (!it.nocmp) u.push(['cmp', it.id, it.id]);
+  }));
+  OTHERS.forEach((o, i) => u.push(['oth', i, 'oth' + i]));
+  if (S.hasGong) GONG.forEach(g => u.push(['ans', g.id + '_q0', g.id]));
+  if (S.use20) STRENGTHEN.forEach(it => it.qs.forEach((q, qi) => u.push(['ans', it.id + '_q' + qi, it.id])));
+  return u;
+}
+function unitDone([kind, key]){
+  if (kind === 'ans') return !!S.ans[key];
+  if (kind === 'cmp') return !!S.cmp[key];
+  return !!S.others[key];
+}
+function updateProgress(){
+  const units = itemUnits();
+  const done = units.filter(unitDone).length;
+  document.getElementById('pfill').style.width = (units.length ? done / units.length * 100 : 0) + '%';
+  document.getElementById('ptext').textContent = done + ' / ' + units.length + ' 항목';
+  FORM.forEach((g, gi) => {
+    const gu = [];
+    g.items.forEach(it => {
+      it.qs.forEach((q, qi) => gu.push(['ans', it.id + '_q' + qi]));
+      if (!it.nocmp) gu.push(['cmp', it.id]);
+    });
+    const d = gu.filter(unitDone).length;
+    const el = document.getElementById('cnt_g' + gi);
+    if (el) { el.textContent = d + '/' + gu.length; el.className = 'cnt' + (d === gu.length ? ' done' : ''); }
+  });
+  const od = OTHERS.map((o, i) => ['oth', i]).filter(unitDone).length;
+  const oe = document.getElementById('cnt_oth');
+  if (oe) { oe.textContent = od + '/' + OTHERS.length; oe.className = 'cnt' + (od === OTHERS.length ? ' done' : ''); }
+}
+function showMissing(){
+  document.querySelectorAll('.missing').forEach(e => e.classList.remove('missing'));
+  let first = null;
+  const mark = id => {
+    const el = document.getElementById('item_' + id);
+    if (!el) return;
+    el.classList.add('missing');
+    el.closest('details').open = true;
+    if (!first) first = el;
+  };
+  FORM.forEach(g => g.items.forEach(it => {
+    const missQ = it.qs.some((q, qi) => !S.ans[it.id + '_q' + qi]);
+    const missC = !it.nocmp && !S.cmp[it.id];
+    if (missQ || missC) mark(it.id);
+  }));
+  OTHERS.forEach((o, i) => { if (!S.others[i]) mark('oth' + i); });
+  if (S.hasGong) GONG.forEach(g => { if (!S.ans[g.id + '_q0']) mark(g.id); });
+  if (S.use20) STRENGTHEN.forEach(it => { if (it.qs.some((q, qi) => !S.ans[it.id + '_q' + qi])) mark(it.id); });
+  if (first) first.scrollIntoView({behavior:'smooth', block:'center'});
+  else alert('모든 항목이 작성되었습니다!');
+}
+
+/* ====== 내보내기 ====== */
+async function collectPhotos(){
+  return new Promise(res => {
+    const out = {};
+    const keys = Object.keys(S.cap);
+    if (!keys.length || !db) return res(out);
+    let n = 0;
+    const tx = db.transaction('photos').objectStore('photos');
+    keys.forEach(pid => {
+      tx.get(pid).onsuccess = e => {
+        if (e.target.result) out[pid] = e.target.result;
+        if (++n === keys.length) res(out);
+      };
+    });
+  });
+}
+const safeName = s => String(s).replace(/[\\/:*?"<>|\r\n]+/g, '_').trim();
+function dlLink(name, blob){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name; a.rel = 'noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+/* iOS(특히 홈 화면 앱 모드)는 다운로드가 불안정하므로 공유시트(파일에 저장·카카오톡·메일)를 사용 */
+async function dl(name, content, mime){
+  const blob = new Blob([content], {type: mime});
+  let file = null;
+  try { file = new File([blob], name, {type: mime}); } catch(e){}
+  const canShare = IS_IOS && file && navigator.canShare && navigator.canShare({files:[file]});
+  if (!canShare) return dlLink(name, blob);
+  try {
+    await navigator.share({files:[file], title:name});
+  } catch(e) {
+    if (e.name === 'AbortError') return;                 /* 사용자가 공유시트를 닫음 */
+    /* 사진을 읽는 동안 탭 동작 유효시간이 지나 거부된 경우 — 버튼을 한 번 더 눌러 공유 */
+    const m = document.createElement('div'); m.className = 'modal';
+    m.innerHTML = '<div class="box"><p><b>파일 준비 완료</b><br><span style="font-size:12.5px;color:#555"></span></p>' +
+                  '<button class="primary">공유 / 파일에 저장</button><button>다운로드</button><button>닫기</button></div>';
+    m.querySelector('span').textContent = name;
+    const [bShare, bDl, bClose] = m.querySelectorAll('button');
+    bShare.onclick = () => { m.remove(); navigator.share({files:[file], title:name}).catch(() => {}); };
+    bDl.onclick = () => { m.remove(); dlLink(name, blob); };
+    bClose.onclick = () => m.remove();
+    document.body.appendChild(m);
+  }
+}
+async function exportJSON(){
+  const photos = await collectPhotos();
+  const name = safeName(S.meta.bname || '건축물') + '_점검데이터_' + (S.meta.date || new Date().toISOString().slice(0,10)) + '.json';
+  dl(name, JSON.stringify({state:S, photos}, null, 1), 'application/json');
+}
+function importJSON(ev){
+  const f = ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      S = d.state;
+      localStorage.setItem(LS_KEY, JSON.stringify(S));
+      if (d.photos && db && Object.keys(d.photos).length) {
+        /* 사진이 많으면 저장에 시간이 걸리므로 트랜잭션 완료 후 새로고침 */
+        const tx = db.transaction('photos','readwrite');
+        const st = tx.objectStore('photos');
+        Object.entries(d.photos).forEach(([k, v]) => st.put(v, k));
+        tx.oncomplete = () => location.reload();
+        tx.onerror = () => { alert('사진 일부를 저장하지 못했습니다 (저장공간 부족 등).'); location.reload(); };
+      } else setTimeout(() => location.reload(), 300);
+    } catch(e){ alert('파일을 읽을 수 없습니다: ' + e.message); }
+  };
+  r.readAsText(f);
+}
+async function exportReport(){
+  const photos = await collectPhotos();
+  const esc = s => (s || '').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  const badge = v => {
+    if (!v) return '<span style="color:#c62828;font-weight:700">미작성</span>';
+    const color = BADSET.has(v) ? '#c62828' : NASET.has(v) ? '#757575' : '#2e7d32';
+    return '<span style="color:' + color + ';font-weight:700">' + v + '</span>';
+  };
+  const phHtml = id => {
+    const keys = Object.keys(S.cap).filter(k => k.startsWith(id + '_'));
+    if (!keys.length) return '';
+    return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">' + keys.map(pid =>
+      '<figure style="margin:0;width:180px"><img src="' + (photos[pid] || '') + '" style="width:180px;border:1px solid #ccc;border-radius:4px">' +
+      '<figcaption style="font-size:11px;color:#555">' + esc(S.cap[pid]) + '</figcaption></figure>').join('') + '</div>';
+  };
+  let h = '<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>점검 요약 - ' + esc(S.meta.bname) + '</title>' +
+    '<style>body{font-family:\'Malgun Gothic\',sans-serif;max-width:900px;margin:20px auto;padding:0 16px;font-size:14px;color:#111}' +
+    'h1{font-size:20px;border-bottom:3px solid #000;padding-bottom:8px} h2{font-size:16px;background:#D7D8D7;padding:6px 10px;margin-top:24px}' +
+    'h3{font-size:14px;margin:14px 0 4px} h3 .no{color:#0b57a4} table{border-collapse:collapse;width:100%;font-size:13px}' +
+    'td,th{padding:5px 8px;text-align:left} th{background:#D7D8D7}' +
+    'table{border-top:1pt solid #000;border-bottom:1pt solid #000} tr td,tr th{border-top:.25pt solid #999;border-bottom:.25pt solid #999}' +
+    '.memo{background:#fafafa;border-left:3px solid #999;padding:5px 8px;margin:4px 0;font-size:12.5px}' +
+    '@media print{h2{-webkit-print-color-adjust:exact}}</style></head><body>';
+  h += '<h1>건축물관리점검 현장조사 요약 <span style="font-size:12px;color:#666">(BLCM 입력 참조용 / 우림구조엔지니어링)</span></h1>';
+  h += '<h2>점검 개요 (별지 제1호 기입용)</h2><table>';
+  const ML = {date:'점검일자', period:'점검기간', chief:'점검책임자', insp:'점검자',
+    mgr:'관리자 성명', mgrtel:'관리자 전화번호', mgrco:'관리자 회사명', mgrcono:'법인등록번호',
+    mgraddr:'관리자 주소', mgremail:'전자우편', mgragree:'전자우편 송달동의',
+    bname:'건축물 명칭', baddr:'건축물 위치', use:'주 용도', struct:'구조형식',
+    siteArea:'대지면적(㎡)', bldArea:'건축면적(㎡)', area:'연면적(㎡)', floors:'층수',
+    zone:'용도지역', district:'용도지구/구역', units:'세대수(호수)', appr:'사용승인일',
+    years:'경과년수', grade:'전차 점검등급', gongsum:'공작물 개요', elev:'승강기'};
+  Object.entries(ML).forEach(([k, l]) => { h += '<tr><th style="width:170px">' + l + '</th><td>' + esc(S.meta[k]) + '</td></tr>'; });
+  h += '<tr><th>구조안전 강화점검 대상</th><td>' + (S.use20 ? '예 (20년 경과 최초 정기점검)' : '아니오') + '</td></tr>';
+  h += '<tr><th>공작물 점검(별지3) 대상</th><td>' + (S.hasGong ? '예' : '아니오') + '</td></tr></table>';
+  FORM.forEach(g => {
+    h += '<h2>' + g.sec + ' <span style="font-size:11px;color:#555;font-weight:400">' + (g.ref || '') + '</span></h2>';
+    g.items.forEach(it => {
+      h += '<h3><span class="no">' + (it.no || '') + '</span> ' + it.t + ' <span style="font-size:11px;color:#777">' + it.law + '</span></h3><table>';
+      it.qs.forEach((q, qi) => { h += '<tr><td>' + q[0] + '</td><td style="width:110px;text-align:center">' + badge(S.ans[it.id + '_q' + qi]) + '</td></tr>'; });
+      if (!it.nocmp) h += '<tr><td style="color:#0b57a4;font-weight:700">현행 기준과의 비교·검토</td><td style="width:110px;text-align:center">' + badge(S.cmp[it.id]) + '</td></tr>';
+      if (S.cnt[it.id]) h += '<tr><td>지적 건수</td><td style="text-align:center;font-weight:700">' + S.cnt[it.id] + '건</td></tr>';
+      h += '</table>';
+      const m = S.memo[it.id] || {};
+      if (m.v) h += '<div class="memo"><b>개선사항(위법):</b> ' + esc(m.v) + '</div>';
+      if (m.p) h += '<div class="memo"><b>성능개선/현황:</b> ' + esc(m.p) + '</div>';
+      h += phHtml(it.id);
+    });
+  });
+  h += '<h2>그 밖의 항목에 대한 이행여부 (별지1 뒷면)</h2><table>';
+  OTHERS.forEach((o, i) => {
+    h += '<tr><td>' + o + '</td><td style="width:90px;text-align:center">' + badge(S.others[i]) + '</td><td style="width:200px;font-size:12px">' + esc(S.otherNote[i]) + '</td></tr>';
+  });
+  h += '</table>';
+  if (S.hasGong) {
+    h += '<h2>공작물 점검 (별지 제3호)</h2>';
+    GONG.forEach(g => {
+      h += '<h3>' + g.t + '</h3><table><tr><td>상태 및 안전성 유지 여부</td><td style="width:110px;text-align:center">' + badge(S.ans[g.id + '_q0']) + '</td></tr></table>';
+      const m = S.memo[g.id] || {};
+      if (m.v) h += '<div class="memo"><b>메모:</b> ' + esc(m.v) + '</div>';
+      h += phHtml(g.id);
+    });
+  }
+  if (S.use20) {
+    h += '<h2>구조안전 강화점검 (지침 제15조②)</h2>';
+    STRENGTHEN.forEach(it => {
+      h += '<h3>' + it.t + '</h3><table>';
+      it.qs.forEach((q, qi) => { h += '<tr><td>' + q[0] + '</td><td style="width:110px;text-align:center">' + badge(S.ans[it.id + '_q' + qi]) + '</td></tr>'; });
+      h += '</table>';
+      const m = S.memo[it.id] || {};
+      if (m.v) h += '<div class="memo"><b>측정·의견:</b> ' + esc(m.v) + '</div>';
+      h += phHtml(it.id);
+    });
+  }
+  h += '<h2>일반 사진</h2>' + phHtml('general');
+  h += '<h2>종합 메모</h2>';
+  const SL = {major:'중대결함', func:'기능유지', energy:'에너지 절감', fire:'화재안전 강화', struct:'구조안전 강화', etc:'그 밖의 방안', overall:'종합의견 초안'};
+  Object.entries(SL).forEach(([k, l]) => { if (S.sum[k]) h += '<div class="memo"><b>' + l + ':</b> ' + esc(S.sum[k]) + '</div>'; });
+  h += '<p style="color:#888;font-size:11px;margin-top:30px">생성: ' + new Date().toLocaleString('ko-KR') + ' — 건축물관리점검 현장 체크리스트 v2</p></body></html>';
+  const name = safeName(S.meta.bname || '건축물') + '_점검요약_' + (S.meta.date || new Date().toISOString().slice(0,10)) + '.html';
+  dl(name, h, 'text/html');
+}
+
+/* ====== 라이선스 (허가된 기기에서만 사용) ======
+   - 최초 실행 시 기기마다 무작위 기기 ID를 만들어 이 기기(브라우저) 저장소에 보관
+   - 관리자가 기기 ID에 전자서명한 라이선스 코드를 발급 (license_admin.html)
+   - 앱에는 공개키만 들어 있어 코드 위조·다른 기기 재사용 불가 */
+/* ---- 라이선스 서명 검증 코어 (SHA-256 + ECDSA P-256, 순수 JS) ----
+   WebCrypto(crypto.subtle)는 https 에서만 동작하므로 file:// · iOS 파일 열기에서도
+   동작하도록 직접 구현. BigInt 필요 (iOS 14+, Chrome 67+). */
+const LIC = (() => {
+  const K = new Uint32Array([
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+  const ror = (x, n) => (x >>> n) | (x << (32 - n));
+  function sha256(bytes){
+    const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    const l = bytes.length, bl = ((l + 9 + 63) >> 6) << 6;
+    const m = new Uint8Array(bl); m.set(bytes); m[l] = 0x80;
+    const dv = new DataView(m.buffer);
+    dv.setUint32(bl - 8, Math.floor(l / 0x20000000)); dv.setUint32(bl - 4, (l << 3) >>> 0);
+    const W = new Uint32Array(64);
+    for (let o = 0; o < bl; o += 64) {
+      for (let i = 0; i < 16; i++) W[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++) {
+        const a = W[i - 15], b = W[i - 2];
+        W[i] = (W[i - 16] + (ror(a, 7) ^ ror(a, 18) ^ (a >>> 3)) + W[i - 7] + (ror(b, 17) ^ ror(b, 19) ^ (b >>> 10))) | 0;
+      }
+      let [a, b, c, d, e, f, g, h] = H;
+      for (let i = 0; i < 64; i++) {
+        const t1 = (h + (ror(e, 6) ^ ror(e, 11) ^ ror(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + W[i]) | 0;
+        const t2 = ((ror(a, 2) ^ ror(a, 13) ^ ror(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    const out = new Uint8Array(32), ov = new DataView(out.buffer);
+    H.forEach((v, i) => ov.setUint32(i * 4, v >>> 0));
+    return out;
+  }
+  /* NIST P-256 */
+  const P = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffffn;
+  const N = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551n;
+  const G = [0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296n,
+             0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5n];
+  const mod = (a, m) => { a %= m; return a < 0n ? a + m : a; };
+  function inv(a, m){
+    let t = 0n, nt = 1n, r = m, nr = mod(a, m);
+    while (nr) { const q = r / nr; [t, nt] = [nt, t - q * nt]; [r, nr] = [nr, r - q * nr]; }
+    return mod(t, m);
+  }
+  function add(p1, p2){
+    if (!p1) return p2; if (!p2) return p1;
+    const [x1, y1] = p1, [x2, y2] = p2; let l;
+    if (x1 === x2) {
+      if (mod(y1 + y2, P) === 0n) return null;
+      l = mod((3n * x1 * x1 - 3n) * inv(2n * y1, P), P);
+    } else l = mod((y2 - y1) * inv(x2 - x1, P), P);
+    const x3 = mod(l * l - x1 - x2, P);
+    return [x3, mod(l * (x1 - x3) - y1, P)];
+  }
+  function mul(k, pt){ let r = null, q = pt; while (k > 0n) { if (k & 1n) r = add(r, q); q = add(q, q); k >>= 1n; } return r; }
+  const toBig = b => { let x = 0n; for (const v of b) x = (x << 8n) | BigInt(v); return x; };
+  const toBytes32 = x => { const b = new Uint8Array(32); for (let i = 31; i >= 0; i--) { b[i] = Number(x & 0xffn); x >>= 8n; } return b; };
+  function verify(m, sig, Q){
+    if (!sig || sig.length !== 64) return false;
+    const r = toBig(sig.slice(0, 32)), s = toBig(sig.slice(32));
+    if (r <= 0n || r >= N || s <= 0n || s >= N) return false;
+    const e = toBig(sha256(m)), w = inv(s, N);
+    const X = add(mul(mod(e * w, N), G), mul(mod(r * w, N), Q));
+    return !!X && mod(X[0], N) === r;
+  }
+  function sign(m, d){
+    const e = toBig(sha256(m));
+    for (;;) {
+      const k = toBig(crypto.getRandomValues(new Uint8Array(32)));
+      if (k <= 0n || k >= N) continue;
+      const r = mod(mul(k, G)[0], N); if (!r) continue;
+      const s = mod(inv(k, N) * (e + r * d), N); if (!s) continue;
+      const out = new Uint8Array(64); out.set(toBytes32(r)); out.set(toBytes32(s), 32);
+      return out;
+    }
+  }
+  /* 인코딩 */
+  const utf8 = s => new TextEncoder().encode(s);
+  const b64u = b => { let s = ''; b.forEach(v => s += String.fromCharCode(v)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const unb64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+  const B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';   /* Crockford Base32 (I·L·O·U 제외) */
+  function newDeviceId(){
+    let bits = 0, val = 0, out = '';
+    for (const v of crypto.getRandomValues(new Uint8Array(10))) {
+      val = (val << 8) | v; bits += 8;
+      while (bits >= 5) { out += B32[(val >>> (bits - 5)) & 31]; bits -= 5; }
+      val &= (1 << bits) - 1;
+    }
+    return out;
+  }
+  const normId = s => String(s || '').toUpperCase().replace(/O/g, '0').replace(/[IL]/g, '1').replace(/[^0-9A-Z]/g, '');
+  const fmtId = id => id.replace(/(.{4})(?=.)/g, '$1-');
+  const fmtExp = e => e === '0' ? '무기한' : e.slice(0, 4) + '.' + e.slice(4, 6) + '.' + e.slice(6);
+  const TAG = 'WRSC1';
+  const msg = (dev, exp, name) => utf8(TAG + '|' + dev + '|' + exp + '|' + name);
+  const today = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+  /* 라이선스 코드 = 만료일(YYYYMMDD|0) . 사용자명(base64url) . 서명(base64url 64B) */
+  function parse(code){
+    const c = String(code || '').replace(/\s+/g, ''), p = c.split('.');
+    if (p.length !== 3 || !/^(0|\d{8})$/.test(p[0])) return null;
+    try { return {exp:p[0], name:new TextDecoder().decode(unb64u(p[1])), sig:unb64u(p[2]), code:c}; }
+    catch(e){ return null; }
+  }
+  function check(dev, code, Q){
+    const L = parse(code);
+    if (!L) return {ok:false, reason:'format'};
+    if (!verify(msg(dev, L.exp, L.name), L.sig, Q)) return {ok:false, reason:'sig'};
+    if (L.exp !== '0' && today() > +L.exp) return {ok:false, reason:'expired', exp:L.exp, name:L.name};
+    return {ok:true, exp:L.exp, name:L.name, code:L.code};
+  }
+  function issue(dev, exp, name, d){ return exp + '.' + b64u(utf8(name)) + '.' + b64u(sign(msg(dev, exp, name), d)); }
+  return {sha256, verify, sign, check, issue, parse, newDeviceId, normId, fmtId, fmtExp, mul, G, toBig, toBytes32};
+})();
+const LIC_PUB = [0xfe9e5dbace54526364b04b3d6460a0ae7ad872f3bc3772d5644824f36e730b85n, 0x19e1e50c531ec9563564f2c55e433bd2bb6a4d558a33a2b511a7a2136865189dn];
+const LK_DEV = 'wrsc_device', LK_LIC = 'wrsc_license';
+let LIC_INFO = null, LIC_DEV = '';
+
+const lsGet = k => { try { return localStorage.getItem(k); } catch(e){ return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch(e){ return false; } };
+function kvDB(){
+  return new Promise(res => {
+    try {
+      const r = indexedDB.open('wrsc_lic', 1);
+      r.onupgradeneeded = e => e.target.result.createObjectStore('kv');
+      r.onsuccess = e => res(e.target.result);
+      r.onerror = r.onblocked = () => res(null);
+    } catch(e){ res(null); }
+  });
+}
+function kvGet(d, k){
+  return new Promise(res => {
+    if (!d) return res(null);
+    try { const q = d.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); }
+    catch(e){ res(null); }
+  });
+}
+function kvSet(d, k, v){ if (d) try { d.transaction('kv', 'readwrite').objectStore('kv').put(v, k); } catch(e){} }
+
+async function copyText(t){
+  try { await navigator.clipboard.writeText(t); return true; } catch(e){}
+  const ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+  document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+  let ok = false; try { ok = document.execCommand('copy'); } catch(e){}
+  ta.remove(); return ok;
+}
+const deviceKind = () => IS_IOS ? (/iPhone|iPod/.test(navigator.userAgent) ? 'iPhone' : 'iPad')
+  : /Android/.test(navigator.userAgent) ? 'Android' : /Windows/.test(navigator.userAgent) ? 'Windows PC' : /Mac/.test(navigator.userAgent) ? 'Mac' : '기타';
+
+async function licenseGate(){
+  const kv = await kvDB();
+  /* 두 저장소 중 하나라도 남아 있으면 같은 기기 ID 유지 */
+  let dev = LIC.normId(lsGet(LK_DEV) || await kvGet(kv, LK_DEV));
+  if (dev.length !== 16) dev = LIC.newDeviceId();
+  LIC_DEV = dev;
+  const kept = lsSet(LK_DEV, dev) | !!kv;
+  kvSet(kv, LK_DEV, dev);
+
+  /* 활성화 링크(...#license=코드) 또는 저장된 코드 확인 */
+  const hm = location.hash.match(/[#&]license=([^&]+)/);
+  const cands = [];
+  if (hm) { cands.push(decodeURIComponent(hm[1])); try { history.replaceState(null, '', location.pathname + location.search); } catch(e){} }
+  cands.push(lsGet(LK_LIC), await kvGet(kv, LK_LIC));
+  let last = null;
+  for (const c of cands) {
+    if (!c) continue;
+    const r = LIC.check(dev, c, LIC_PUB);
+    if (r.ok) { lsSet(LK_LIC, r.code); kvSet(kv, LK_LIC, r.code); return unlock(r); }
+    if (!last || r.reason === 'expired') last = r;
+  }
+  return new Promise(resolve => showLock(dev, last, kv, !kept, r => resolve(unlock(r))));
+}
+function unlock(r){
+  LIC_INFO = r;
+  document.getElementById('lock').remove();
+  document.body.classList.remove('locked');
+  return r;
+}
+function showLock(dev, last, kv, noStore, done){
+  const L = document.getElementById('lock');
+  L.innerHTML =
+    '<div class="card"><div class="hbar"><div></div><div></div><div></div><div></div><div></div><div></div></div><div class="body">' +
+    '<h2>건축물관리점검 현장 체크리스트</h2><div class="co">우림구조엔지니어링 · 허가된 기기 전용</div>' +
+    '<div class="lbl">이 기기의 ID</div><div class="devid" id="lk_dev"></div>' +
+    '<div class="row"><button id="lk_copy">ID 복사</button>' + (navigator.share ? '<button id="lk_share">ID 보내기</button>' : '') + '</div>' +
+    '<div class="lbl">라이선스 코드</div><textarea id="lk_code" placeholder="관리자에게 받은 코드를 붙여넣으세요" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>' +
+    '<div class="row">' + (navigator.clipboard && navigator.clipboard.readText ? '<button id="lk_paste">붙여넣기</button>' : '') +
+    '<button class="primary" id="lk_ok">등록</button></div>' +
+    '<div class="msg" id="lk_msg"></div>' +
+    '<div class="help">① 위 <b>기기 ID</b>를 관리자에게 보내세요.<br>② 관리자가 보내준 <b>라이선스 코드</b>를 붙여넣고 [등록]을 누르세요. (활성화 링크를 받았다면 링크를 누르면 바로 등록됩니다)<br>' +
+    '※ 브라우저 데이터를 삭제하거나 다른 브라우저·기기에서 열면 기기 ID가 바뀌어 재발급이 필요합니다.' +
+    (IS_IOS ? '<br>※ iPhone/iPad: <b>홈 화면에 추가한 아이콘으로 실행한 상태에서</b> 기기 ID를 확인·등록하세요 (Safari와 홈 화면 앱은 저장소가 따로입니다).' : '') +
+    '</div></div></div>';
+  const $ = id => document.getElementById(id);
+  const msg = (t, cls) => { $('lk_msg').textContent = t; $('lk_msg').className = 'msg ' + (cls || ''); };
+  $('lk_dev').textContent = LIC.fmtId(dev);
+  if (noStore) msg('⚠ 이 브라우저는 저장소를 사용할 수 없어 등록 상태가 유지되지 않습니다. (개인정보 보호 모드 해제 또는 다른 열기 방식 필요)', 'err');
+  else if (last && last.reason === 'expired') msg('라이선스가 만료되었습니다 (' + LIC.fmtExp(last.exp) + '). 관리자에게 재발급을 요청하세요.', 'err');
+  else if (last) msg('저장된 라이선스가 이 기기와 맞지 않습니다. 새 코드를 등록하세요.', 'err');
+  const reqText = '[현장 체크리스트 라이선스 요청]\n기기 ID: ' + LIC.fmtId(dev) + '\n기기: ' + deviceKind();
+  $('lk_copy').onclick = async () => msg(await copyText(reqText) ? '기기 ID를 복사했습니다. 메신저에 붙여넣어 관리자에게 보내세요.' : '복사하지 못했습니다. ID를 길게 눌러 직접 복사하세요.', 'ok');
+  if ($('lk_share')) $('lk_share').onclick = () => navigator.share({text:reqText}).catch(() => {});
+  if ($('lk_paste')) $('lk_paste').onclick = async () => { try { $('lk_code').value = (await navigator.clipboard.readText()).trim(); } catch(e){ msg('붙여넣기 권한이 없습니다. 입력칸을 길게 눌러 붙여넣으세요.', 'err'); } };
+  $('lk_ok').onclick = () => {
+    const code = $('lk_code').value.trim();
+    if (!code) return msg('라이선스 코드를 입력하세요.', 'err');
+    const r = LIC.check(dev, code, LIC_PUB);
+    if (r.ok) { lsSet(LK_LIC, r.code); kvSet(kv, LK_LIC, r.code); done(r); }
+    else msg(r.reason === 'expired' ? '만료된 라이선스입니다 (' + LIC.fmtExp(r.exp) + ').'
+           : r.reason === 'format' ? '코드 형식이 올바르지 않습니다. 전체를 빠짐없이 붙여넣으세요.'
+           : '이 기기용 코드가 아닙니다. 기기 ID를 다시 확인해 관리자에게 요청하세요.', 'err');
+  };
+  /* 잠금 화면이 열린 상태에서 활성화 링크를 누른 경우 (주소의 # 부분만 바뀌어 새로고침되지 않음) */
+  const onHash = () => {
+    const hm = location.hash.match(/[#&]license=([^&]+)/);
+    if (!hm || !document.getElementById('lk_code')) return;
+    $('lk_code').value = decodeURIComponent(hm[1]);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+    $('lk_ok').click();
+    if (!document.getElementById('lock')) window.removeEventListener('hashchange', onHash);
+  };
+  window.addEventListener('hashchange', onHash);
+}
+
+licenseGate().then(() => {
+  build();
+  updateProgress();
+  renderAllPhotos();
+  const li = document.getElementById('licinfo');
+  if (li && LIC_INFO) li.textContent = '라이선스: ' + (LIC_INFO.name || '등록됨') + ' · 만료 ' + LIC.fmtExp(LIC_INFO.exp) + ' · 기기 ID ' + LIC.fmtId(LIC_DEV);
+});
+</script>
+</body>
+</html>
