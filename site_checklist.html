@@ -125,6 +125,23 @@
   .pbox .pact{display:flex; gap:8px; padding:10px 14px; border-top:1px solid #ddd;}
   .modal .box .pact button{margin:0;}
   .pbox .pfoot{font-size:11px; color:#777; padding:0 14px 12px;}
+  .pbox .psave{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 14px 8px; font-size:12px; color:#444;}
+  .modal .box .psave button{display:inline-block; width:auto; margin:0; padding:5px 10px; font-size:12px;}
+  /* 저장 위치 설정 */
+  .modal .sbox{max-width:460px; text-align:left; padding:0; max-height:calc(100vh - 32px); overflow:auto;}
+  .sbox .phead{display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid #ddd; font-size:15px;}
+  .sbox .phead .x{display:inline; width:auto; margin:0; padding:0 6px; border:none; background:none; font-size:24px; line-height:1;}
+  .sbody{padding:12px 14px 14px;}
+  .sinfo{font-size:12.5px; color:#555; line-height:1.55; margin-bottom:10px;}
+  .sopt{display:block; border:1px solid #ccc; border-radius:8px; padding:10px 12px; margin-top:8px; font-size:13.5px; line-height:1.5; cursor:pointer;}
+  .sopt.on{border-color:#111; background:#f7f7f7;}
+  .shint{font-size:12px; color:#666;}
+  .srow{display:flex; align-items:center; gap:8px; margin-top:8px;}
+  .sdir{flex:1; font-size:12.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .modal .box .srow button{display:inline-block; width:auto; margin:0; padding:6px 12px; font-size:12.5px;}
+  #toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(76px + env(safe-area-inset-bottom)); z-index:960;
+         max-width:calc(100% - 32px); background:#111; color:#fff; font-size:13px; padding:10px 14px; border-radius:8px;
+         box-shadow:0 4px 14px rgba(0,0,0,.25); word-break:break-all;}
   @media (max-width:420px){ .pitem{flex-wrap:wrap;} .pbtns{width:100%; justify-content:flex-end;} }
   /* 라이선스 잠금 화면 */
   body.locked header, body.locked main, body.locked footer{display:none!important;}
@@ -934,29 +951,156 @@ function dlLink(name, blob){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 60000);
 }
-/* iOS(특히 홈 화면 앱 모드)는 다운로드가 불안정하므로 공유시트(파일에 저장·카카오톡·메일)를 사용 */
-async function dl(name, content, mime){
-  if (IN_APP) alert('메신저 앱 안의 브라우저에서는 파일 저장이 되지 않을 수 있습니다.\n' + (IS_IOS ? 'Safari' : 'Chrome') + '로 열어서 저장해 주세요.');
-  const blob = new Blob([content], {type: mime});
-  let file = null;
-  try { file = new File([blob], name, {type: mime}); } catch(e){}
-  const canShare = IS_IOS && file && navigator.canShare && navigator.canShare({files:[file]});
-  if (!canShare) return dlLink(name, blob);
+function toast(text, ms){
+  const old = document.getElementById('toast'); if (old) old.remove();
+  const t = document.createElement('div'); t.id = 'toast'; t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), ms || 4500);
+}
+/* 사진을 읽는 동안 탭 동작 유효시간이 지나 저장 창이 거부된 경우 — 버튼을 한 번 더 눌러 저장 */
+function readyModal(name, label, run, blob){
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = '<div class="box"><p><b>파일 준비 완료</b><br><span style="font-size:12.5px;color:#555"></span></p>' +
+                '<button class="primary"></button><button>기본 다운로드 폴더로</button><button>닫기</button></div>';
+  m.querySelector('span').textContent = name;
+  const [bRun, bDl, bClose] = m.querySelectorAll('button');
+  bRun.textContent = label;
+  bRun.onclick = () => { m.remove(); run(); };
+  bDl.onclick = () => { m.remove(); dlLink(name, blob); toast('다운로드 폴더에 저장: ' + name); };
+  bClose.onclick = () => m.remove();
+  document.body.appendChild(m);
+}
+
+/* ====== 저장 위치 ======
+   - PC Chrome/Edge : 지정 폴더(프로젝트별 하위 폴더 자동 생성) / 매번 위치 선택 / 기본 다운로드 폴더
+   - iPhone·iPad    : 공유 창 → [파일에 저장]에서 폴더 선택 (iOS는 웹앱이 폴더를 기억할 수 없음)
+   - Android 등     : 브라우저 기본 다운로드 폴더 */
+const CAN_DIR = !IS_IOS && 'showDirectoryPicker' in window;
+const CAN_ASK = !IS_IOS && 'showSaveFilePicker' in window;
+const LK_SAVE = 'wrsc_save_mode', KV_DIR = 'save_dir';
+function saveMode(){
+  let m = null; try { m = localStorage.getItem(LK_SAVE); } catch(e){}
+  if ((m === 'dir' && !CAN_DIR) || (m === 'ask' && !CAN_ASK)) m = null;
+  return m || 'download';
+}
+async function getSaveDir(){ return kvGet(await kvDB(), KV_DIR); }
+async function pickSaveDir(){
   try {
-    await navigator.share({files:[file], title:name});
-  } catch(e) {
-    if (e.name === 'AbortError') return;                 /* 사용자가 공유시트를 닫음 */
-    /* 사진을 읽는 동안 탭 동작 유효시간이 지나 거부된 경우 — 버튼을 한 번 더 눌러 공유 */
-    const m = document.createElement('div'); m.className = 'modal';
-    m.innerHTML = '<div class="box"><p><b>파일 준비 완료</b><br><span style="font-size:12.5px;color:#555"></span></p>' +
-                  '<button class="primary">공유 / 파일에 저장</button><button>다운로드</button><button>닫기</button></div>';
-    m.querySelector('span').textContent = name;
-    const [bShare, bDl, bClose] = m.querySelectorAll('button');
-    bShare.onclick = () => { m.remove(); navigator.share({files:[file], title:name}).catch(() => {}); };
-    bDl.onclick = () => { m.remove(); dlLink(name, blob); };
-    bClose.onclick = () => m.remove();
-    document.body.appendChild(m);
+    const h = await window.showDirectoryPicker({id:'wrsc_save', mode:'readwrite', startIn:'documents'});
+    kvSet(await kvDB(), KV_DIR, h);
+    lsPut(LK_SAVE, 'dir');
+    return h;
+  } catch(e){ return null; }
+}
+async function ensurePerm(h){
+  const o = {mode:'readwrite'};
+  if (!h.queryPermission || await h.queryPermission(o) === 'granted') return true;
+  return (await h.requestPermission(o)) === 'granted';
+}
+async function saveToDir(name, blob, folder){
+  const root = await getSaveDir();
+  if (!root) return false;
+  if (!await ensurePerm(root)) return false;
+  const dir = folder ? await root.getDirectoryHandle(folder, {create:true}) : root;
+  const fh = await dir.getFileHandle(name, {create:true});
+  const w = await fh.createWritable(); await w.write(blob); await w.close();
+  toast('저장 완료: ' + root.name + ' › ' + (folder ? folder + ' › ' : '') + name);
+  return true;
+}
+async function saveAsk(name, blob){
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const T = {json:['점검 데이터', 'application/json'], html:['요약보고서', 'text/html'], zip:['사진 ZIP', 'application/zip']}[ext];
+  const opt = {suggestedName:name, id:'wrsc_save', startIn:'documents'};
+  if (T) opt.types = [{description:T[0], accept:{[T[1]]:['.' + ext]}}];
+  const fh = await window.showSaveFilePicker(opt);
+  const w = await fh.createWritable(); await w.write(blob); await w.close();
+  toast('저장 완료: ' + fh.name);
+  return true;
+}
+function saveLocationText(){
+  if (IS_IOS) return '공유 창 → [파일에 저장]에서 선택한 폴더';
+  const m = saveMode();
+  if (m === 'ask') return '저장할 때마다 위치 선택';
+  if (m === 'dir') return '지정 폴더 (프로젝트별 하위 폴더)';
+  return '브라우저 기본 다운로드 폴더';
+}
+async function openSaveSettings(){
+  const m = document.createElement('div'); m.className = 'modal';
+  const box = document.createElement('div'); box.className = 'box sbox';
+  m.appendChild(box); document.body.appendChild(m);
+  const close = () => m.remove();
+  m.onclick = e => { if (e.target === m) close(); };
+  let html = '<div class="phead"><b>파일 저장 위치</b><button class="x" aria-label="닫기">×</button></div><div class="sbody">' +
+    '<div class="sinfo">JSON 백업·요약보고서·사진 ZIP을 저장할 위치입니다.<br>작성 중인 <b>프로젝트 자체는 파일이 아니라 이 기기의 앱 저장소에 자동 저장</b>되므로 따로 저장할 필요가 없습니다.</div>';
+  if (IS_IOS) {
+    html += '<div class="sopt on"><b>iPhone / iPad</b><br>저장 버튼을 누르면 공유 창이 열립니다. <b>[파일에 저장]</b>을 누르고 원하는 폴더' +
+      '(iCloud Drive 또는 나의 iPhone › 원하는 폴더)를 고르세요.<br><span class="shint">iOS에서는 웹앱이 폴더를 기억할 수 없어 매번 선택해야 합니다. 프로젝트별 폴더를 만들어 두면 편합니다.</span></div>';
+  } else if (CAN_DIR || CAN_ASK) {
+    const mode = saveMode(), dir = await getSaveDir();
+    const opt = (v, t, d, extra) => '<label class="sopt' + (mode === v ? ' on' : '') + '"><input type="radio" name="smode" value="' + v + '"' + (mode === v ? ' checked' : '') + '> <b>' + t + '</b><br><span class="shint">' + d + '</span>' + (extra || '') + '</label>';
+    if (CAN_DIR) html += opt('dir', '지정 폴더에 자동 저장 (권장)', '선택한 폴더 안에 <b>프로젝트(건축물)별 하위 폴더</b>를 자동으로 만들어 저장합니다.',
+      '<div class="srow"><span class="sdir" id="ss_dir"></span><button id="ss_pick">폴더 선택</button></div>');
+    if (CAN_ASK) html += opt('ask', '저장할 때마다 위치 선택', '저장 버튼을 누를 때마다 저장 창이 열립니다.');
+    html += opt('download', '브라우저 기본 다운로드 폴더', '보통 <b>내 PC › 다운로드</b> 폴더입니다. (Chrome 설정 › 다운로드에서 변경 가능)');
+    html += '</div>';
+    box.innerHTML = html;
+    const dirEl = box.querySelector('#ss_dir');
+    if (dirEl) dirEl.textContent = dir ? '📁 ' + dir.name : '선택된 폴더 없음';
+    box.querySelectorAll('input[name=smode]').forEach(r => r.onchange = async () => {
+      if (r.value === 'dir' && !await getSaveDir()) {
+        if (!await pickSaveDir()) { close(); return openSaveSettings(); }
+      } else lsPut(LK_SAVE, r.value);
+      close(); openSaveSettings();
+    });
+    const pick = box.querySelector('#ss_pick');
+    if (pick) pick.onclick = async e => { e.preventDefault(); if (await pickSaveDir()) { close(); openSaveSettings(); toast('저장 폴더를 지정했습니다.'); } };
+    box.querySelector('.x').onclick = close;
+    return;
+  } else {
+    html += '<div class="sopt on"><b>브라우저 기본 다운로드 폴더</b><br>이 브라우저는 폴더 지정을 지원하지 않아 <b>다운로드</b> 폴더에 저장됩니다.' +
+      '<br><span class="shint">Android Chrome: 설정 › 다운로드 › <b>다운로드 위치 묻기</b>를 켜면 매번 위치를 고를 수 있습니다. ' +
+      'PC에서 폴더를 지정하려면 Chrome 또는 Edge를 사용하세요.</span></div>';
   }
+  html += '</div>';
+  box.innerHTML = html;
+  box.querySelector('.x').onclick = close;
+}
+
+/* 파일 저장 — folder: 지정 폴더 모드에서 사용할 프로젝트 하위 폴더 이름 */
+async function dl(name, content, mime, folder){
+  if (IN_APP) alert('메신저 앱 안의 브라우저에서는 파일 저장이 되지 않을 수 있습니다.\n' + (IS_IOS ? 'Safari' : 'Chrome') + '로 열어서 저장해 주세요.');
+  const blob = content instanceof Blob ? content : new Blob([content], {type: mime});
+  folder = folder ? safeName(folder) : '';
+
+  /* iOS(특히 홈 화면 앱 모드)는 다운로드가 불안정하므로 공유시트(파일에 저장·카카오톡·메일)를 사용 */
+  if (IS_IOS) {
+    let file = null;
+    try { file = new File([blob], name, {type: mime}); } catch(e){}
+    if (!(file && navigator.canShare && navigator.canShare({files:[file]}))) return dlLink(name, blob);
+    const share = () => navigator.share({files:[file], title:name}).catch(() => {});
+    try { await navigator.share({files:[file], title:name}); }
+    catch(e) { if (e.name !== 'AbortError') readyModal(name, '공유 / 파일에 저장', share, blob); }
+    return;
+  }
+
+  const mode = saveMode();
+  if (mode === 'dir' || mode === 'ask') {
+    const run = () => mode === 'dir' ? saveToDir(name, blob, folder) : saveAsk(name, blob);
+    try {
+      if (await run()) return;
+      toast('저장 폴더가 지정되지 않았거나 권한이 없어 다운로드 폴더에 저장했습니다. 프로젝트 › 저장 위치에서 폴더를 다시 지정하세요.', 7000);
+    } catch(e) {
+      if (e.name === 'AbortError') return;                          /* 사용자가 저장 창을 닫음 */
+      if (e.name === 'SecurityError' || e.name === 'NotAllowedError')
+        return readyModal(name, mode === 'dir' ? '지정 폴더에 저장' : '저장 위치 선택',
+          () => run().then(ok => { if (!ok) { dlLink(name, blob); toast('다운로드 폴더에 저장: ' + name); } })
+                     .catch(err => { if (err.name !== 'AbortError') alert('저장하지 못했습니다: ' + err.message); }), blob);
+      toast('지정 폴더에 저장하지 못해(' + e.message + ') 다운로드 폴더에 저장했습니다.', 7000);
+    }
+    return dlLink(name, blob);
+  }
+  dlLink(name, blob);
+  toast('다운로드 폴더에 저장: ' + name + (CAN_DIR ? '  (저장 위치는 프로젝트 › 저장 위치에서 변경)' : ''));
 }
 async function exportJSON(projId){
   const id = projId || PROJ;
@@ -964,7 +1108,7 @@ async function exportJSON(projId){
   const p = PROJS.find(x => x.id === id) || {};
   const photos = await collectPhotos(st, id);
   const name = safeName(st.meta.bname || p.name || '건축물') + '_점검데이터_' + (st.meta.date || new Date().toISOString().slice(0,10)) + '.json';
-  dl(name, JSON.stringify({state:st, photos, project:{name:p.name}}, null, 1), 'application/json');
+  dl(name, JSON.stringify({state:st, photos, project:{name:p.name}}, null, 1), 'application/json', st.meta.bname || p.name);
 }
 /* ====== 사진 ZIP 저장 ======
    파일명: 항목번호_항목명_순번_설명.jpg (예: 3.4.5_구조부재 육안점검_01_지하1층 벽체 균열.jpg)
@@ -1038,7 +1182,7 @@ async function exportPhotoZip(projId){
   const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
   files.unshift({name:'00_사진목록.csv', data:new TextEncoder().encode(csv)});
   const zname = safeName(st.meta.bname || p.name || '건축물') + '_사진_' + (st.meta.date || new Date().toISOString().slice(0, 10)) + '.zip';
-  dl(zname, makeZip(files), 'application/zip');
+  dl(zname, makeZip(files), 'application/zip', st.meta.bname || p.name);
 }
 
 /* JSON 불러오기 → 항상 새 프로젝트로 추가 (작성 중인 프로젝트를 덮어쓰지 않음) */
@@ -1103,6 +1247,7 @@ async function openProjects(){
   const box = document.createElement('div'); box.className = 'box pbox';
   box.innerHTML = '<div class="phead"><b>점검 프로젝트</b><button class="x" aria-label="닫기">×</button></div><div class="plist"></div>' +
     '<div class="pact"><button class="primary" id="pm_new">+ 새 프로젝트</button><button id="pm_imp">JSON 불러오기</button></div>' +
+    '<div class="psave"><span>💾 파일 저장 위치: <b id="pm_loc"></b></span><button id="pm_save">변경</button></div>' +
     '<div class="pfoot" id="pm_usage"></div>';
   m.appendChild(box); document.body.appendChild(m);
   const close = () => m.remove();
@@ -1110,6 +1255,12 @@ async function openProjects(){
   m.onclick = e => { if (e.target === m) close(); };
   box.querySelector('#pm_new').onclick = newProject;
   box.querySelector('#pm_imp').onclick = () => document.getElementById('importFile').click();
+  box.querySelector('#pm_save').onclick = () => { close(); openSaveSettings(); };
+  (async () => {
+    let t = saveLocationText();
+    if (saveMode() === 'dir') { const d = await getSaveDir(); if (d) t = '📁 ' + d.name + ' › 프로젝트별 폴더'; }
+    box.querySelector('#pm_loc').textContent = t;
+  })();
   const list = box.querySelector('.plist');
   const sorted = PROJS.slice().sort((a, b) => (b.id === PROJ) - (a.id === PROJ) || b.updated - a.updated);
   for (const p of sorted) {
@@ -1219,7 +1370,7 @@ async function exportReport(){
   Object.entries(SL).forEach(([k, l]) => { if (S.sum[k]) h += '<div class="memo"><b>' + l + ':</b> ' + esc(S.sum[k]) + '</div>'; });
   h += '<p style="color:#888;font-size:11px;margin-top:30px">생성: ' + new Date().toLocaleString('ko-KR') + ' — 건축물관리점검 현장 체크리스트 v2</p></body></html>';
   const name = safeName(S.meta.bname || '건축물') + '_점검요약_' + (S.meta.date || new Date().toISOString().slice(0,10)) + '.html';
-  dl(name, h, 'text/html');
+  dl(name, h, 'text/html', S.meta.bname || (curProj() || {}).name);
 }
 
 /* ====== 라이선스 (허가된 기기에서만 사용) ======
