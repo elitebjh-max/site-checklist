@@ -164,6 +164,7 @@
 <footer>
   <button onclick="showMissing()">미작성 확인</button>
   <button onclick="exportJSON()">JSON 저장</button>
+  <button onclick="exportPhotoZip()">사진 ZIP</button>
   <button class="primary" onclick="exportReport()">요약보고서(HTML)</button>
 </footer>
 <input type="file" id="importFile" accept=".json,application/json" class="vh" onchange="importJSON(event)">
@@ -964,6 +965,81 @@ async function exportJSON(projId){
   const name = safeName(st.meta.bname || p.name || '건축물') + '_점검데이터_' + (st.meta.date || new Date().toISOString().slice(0,10)) + '.json';
   dl(name, JSON.stringify({state:st, photos, project:{name:p.name}}, null, 1), 'application/json');
 }
+/* ====== 사진 ZIP 저장 ======
+   파일명: 항목번호_항목명_순번_설명.jpg (예: 3.4.5_구조부재 육안점검_01_지하1층 벽체 균열.jpg)
+   + 00_사진목록.csv. JPEG는 이미 압축되어 있어 무압축(store) ZIP으로 직접 생성 */
+const CRC_T = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+function crc32(b){ let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files){
+  const enc = new TextEncoder(), parts = [], central = [];
+  const d = new Date();
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let off = 0;
+  for (const f of files) {
+    const nm = enc.encode(f.name), crc = crc32(f.data), sz = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);   /* 0x0800 = 파일명 UTF-8 */
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, sz, true); lh.setUint32(22, sz, true); lh.setUint16(26, nm.length, true);
+    parts.push(lh.buffer, nm, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, sz, true); ch.setUint32(24, sz, true); ch.setUint16(28, nm.length, true);
+    ch.setUint32(42, off, true);
+    central.push(ch.buffer, nm);
+    off += 30 + nm.length + sz;
+  }
+  const cdSize = central.reduce((a, b) => a + b.byteLength, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...central, end.buffer], {type:'application/zip'});
+}
+function photoLabels(){
+  const m = {general:{no:'0', t:'일반사진', ord:0}};
+  let ord = 1;
+  FORM.forEach(g => g.items.forEach(it => { m[it.id] = {no:it.id === 'p1' ? '3.6' : it.no, t:it.t, ord:ord++}; }));
+  GONG.forEach((g, i) => { m[g.id] = {no:'4.' + (i + 1), t:'공작물 ' + g.t, ord:ord++}; });
+  STRENGTHEN.forEach((s, i) => { m[s.id] = {no:'5.' + (i + 1), t:'강화점검 ' + s.t, ord:ord++}; });
+  return m;
+}
+async function exportPhotoZip(projId){
+  const id = projId || PROJ;
+  const st = id === PROJ ? S : loadState(id);
+  const p = PROJS.find(x => x.id === id) || {};
+  const photos = await collectPhotos(st, id);
+  const pids = Object.keys(photos);
+  if (!pids.length) return alert('저장된 사진이 없습니다.');
+  const L = photoLabels();
+  const clip = (s, n) => { s = safeName(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n) : s; };
+  /* 사진ID = 항목ID_촬영시각_난수 → 항목 순서, 촬영 순서로 정렬 */
+  const info = pids.map(pid => {
+    const [item, ts] = pid.split('_');
+    return {pid, item, ts:+ts || 0, lab:L[item] || {no:'9', t:item, ord:999}};
+  }).sort((a, b) => a.lab.ord - b.lab.ord || a.ts - b.ts);
+  const files = [], rows = [['번호', '항목', '설명', '파일명', '촬영시각']], seq = {}, used = new Set();
+  for (const x of info) {
+    seq[x.item] = (seq[x.item] || 0) + 1;
+    const cap = clip(st.cap[x.pid], 40);
+    let name = x.lab.no + '_' + clip(x.lab.t, 30) + '_' + String(seq[x.item]).padStart(2, '0') + (cap ? '_' + cap : '') + '.jpg';
+    while (used.has(name)) name = name.replace(/\.jpg$/, '_.jpg');
+    used.add(name);
+    const bin = atob(photos[x.pid].split(',')[1] || '');
+    files.push({name, data:Uint8Array.from(bin, c => c.charCodeAt(0))});
+    rows.push([x.lab.no, x.lab.t, st.cap[x.pid] || '', name, x.ts ? new Date(x.ts).toLocaleString('ko-KR') : '']);
+  }
+  const csv = '﻿' + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  files.unshift({name:'00_사진목록.csv', data:new TextEncoder().encode(csv)});
+  const zname = safeName(st.meta.bname || p.name || '건축물') + '_사진_' + (st.meta.date || new Date().toISOString().slice(0, 10)) + '.zip';
+  dl(zname, makeZip(files), 'application/zip');
+}
+
 /* JSON 불러오기 → 항상 새 프로젝트로 추가 (작성 중인 프로젝트를 덮어쓰지 않음) */
 function importJSON(ev){
   const f = ev.target.files[0]; if (!f) return;
@@ -1051,6 +1127,7 @@ async function openProjects(){
     if (p.id === PROJ) mk('작성 중', close, 'on');
     else mk('열기', () => switchProject(p.id), 'primary');
     mk('백업', () => exportJSON(p.id));
+    mk('사진', () => exportPhotoZip(p.id));
     mk('삭제', () => deleteProject(p.id), 'danger');
     it.appendChild(info); it.appendChild(btns);
     list.appendChild(it);
